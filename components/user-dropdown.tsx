@@ -35,7 +35,7 @@ export function UserDropdown({ user, profile, avatarUrl }: UserDropdownProps) {
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push('/auth/login');
+    router.push('/');
   };
 
   return (

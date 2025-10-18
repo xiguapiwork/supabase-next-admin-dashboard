@@ -547,7 +547,7 @@ export function Dashboard() {
           </div>
         </div>
       ) : (
-        <div className={`grid gap-6 ${(activeTab === 'points' || activeTab === 'users' || activeTab === 'logs') ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
+        <div className={`grid gap-6 ${(activeTab === 'points' || activeTab === 'users' || activeTab === 'logs') ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
           {getStatsForTab(activeTab).map((stat, index) => (
             <Card key={index} className={activeTab === 'points' && index === 0 ? 'md:col-span-2 lg:col-span-1' : ''}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

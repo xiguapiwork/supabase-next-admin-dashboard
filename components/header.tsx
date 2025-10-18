@@ -61,9 +61,9 @@ export function Header() {
   return (
     <nav className="w-full flex border-b border-b-foreground/10 h-16">
       <div className="w-full flex items-center p-3 px-5 text-sm relative">
-        {/* 左侧：Supabanana 标题 */}
+        {/* 左侧：网站标题 */}
         <div className="flex items-center">
-          <Link href={"/"} className="text-lg font-semibold">Supabanana</Link>
+          <Link href={"/"} className="text-lg font-semibold">supabase-dashboard</Link>
         </div>
         
         {/* 中间：导航按钮（仅登录后显示，绝对居中） */}

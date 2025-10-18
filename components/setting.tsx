@@ -11,8 +11,126 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useAppSettings } from '@/contexts/AppSettingsContext'
 import type { TableBorderType } from '@/contexts/AppSettingsContext'
 import { toast } from 'sonner'
+import { ApiKeyCard } from '@/components/api-key-card'
+import { AddApiKeyCard } from '@/components/add-api-key-card'
+import { TemplateCard } from '@/components/template-card'
+import { AddTemplateCard } from '@/components/add-template-card'
+import { MasonryLayout } from '@/components/masonry-layout'
+
+type SettingTabType = 'apikey' | 'display' | 'deduction' | 'cleanup'
+
+interface ApiKeyData {
+  id: string
+  title: string
+  key: string
+  provider: string
+  isNew?: boolean
+}
+
+interface FeatureItem {
+  id: string
+  name: string
+  value: number
+}
+
+interface TemplateData {
+  id: string
+  title: string
+  description: string
+  features: FeatureItem[]
+  isNew?: boolean
+}
 
 export function Setting() {
+  // 标签页状态
+  const [activeTab, setActiveTab] = useState<SettingTabType>('apikey')
+
+  // API Key 管理状态
+  const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([
+    {
+      id: '1',
+      title: 'Openrouter',
+      key: 'sk-1234567890abcdef1234567890abcdef',
+      provider: 'openrouter'
+    }
+  ])
+
+  // 模版管理状态
+  const [templates, setTemplates] = useState<TemplateData[]>([
+    {
+      id: 'template-1',
+      title: '基础功能',
+      description: '通用基础功能',
+      features: [
+        { id: 'feature1', name: '新用户注册', value: 0 }
+      ]
+    },
+    {
+      id: 'template-2', 
+      title: '测试数据',
+      description: '测试功能',
+      features: [
+        { id: 'feature1', name: '1', value: 0 },
+        { id: 'feature2', name: '2', value: 0 },
+        { id: 'feature3', name: '3', value: 0 }
+      ]
+    },
+    {
+      id: 'template-3',
+      title: '请输入名称',
+      description: '请输入备注',
+      features: [
+        { id: 'feature1', name: '请输入名称', value: 0 }
+      ]
+    }
+  ])
+
+  // API Key 管理函数
+  const handleAddApiKey = () => {
+    const newApiKey: ApiKeyData = {
+      id: Date.now().toString(),
+      title: '',
+      key: '',
+      provider: 'openrouter',
+      isNew: true
+    }
+    setApiKeys(prev => [...prev, newApiKey])
+  }
+
+  const handleUpdateApiKey = (id: string, key: string, provider: string, title?: string) => {
+    setApiKeys(prev => prev.map(item => 
+      item.id === id ? { ...item, key, provider, title: title || item.title, isNew: false } : item
+    ))
+  }
+
+  const handleDeleteApiKey = (id: string) => {
+    setApiKeys(prev => prev.filter(item => item.id !== id))
+  }
+
+  // 模版管理函数
+  const handleAddTemplate = () => {
+    const newTemplate: TemplateData = {
+      id: `template-${Date.now()}`,
+      title: '',
+      description: '',
+      features: [
+        { id: 'feature1', name: '', value: 0 }
+      ],
+      isNew: true
+    }
+    setTemplates(prev => [...prev, newTemplate])
+  }
+
+  const handleUpdateTemplate = (template: TemplateData) => {
+    setTemplates(prev => prev.map(item => 
+      item.id === template.id ? template : item
+    ))
+  }
+
+  const handleDeleteTemplate = (id: string) => {
+    setTemplates(prev => prev.filter(item => item.id !== id))
+  }
+
   // 输入归一化：支持中文输入法下的全角数字与小数点转换
   const normalizeNumericInput = (
     raw: string,
@@ -52,8 +170,8 @@ export function Setting() {
     return v
   }
   // API Key - 保存与草稿
-  const [apiKeySaved, setApiKeySaved] = useState('')
-  const [apiKeyDraft, setApiKeyDraft] = useState('')
+  // const [apiKeySaved, setApiKeySaved] = useState('')
+  // const [apiKeyDraft, setApiKeyDraft] = useState('')
 
   // 显示设置 - 分页数量（使用全局设置作为已保存值），草稿允许空值
   const { pageSize, setPageSize, pointsFormat, setPointsFormat, tableBorder, setTableBorder } = useAppSettings()
@@ -61,18 +179,7 @@ export function Setting() {
   const [pointsFormatDraft, setPointsFormatDraft] = useState<'integer' | 'decimal'>(pointsFormat)
   const [tableBorderDraft, setTableBorderDraft] = useState<TableBorderType>('horizontal')
 
-  // 功能扣分值 - 保存与草稿
-  type DeductionValues = { featureA: number; featureB: number; featureC: number }
-  const [deductionSaved, setDeductionSaved] = useState<DeductionValues>({
-    featureA: 0,
-    featureB: 10,
-    featureC: 15,
-  })
-  const [deductionDraft, setDeductionDraft] = useState<{ featureA: string; featureB: string; featureC: string }>({
-    featureA: String(0),
-    featureB: String(10),
-    featureC: String(15),
-  })
+
 
   // 清除数据功能状态
   const [isCleanupDialogOpen, setIsCleanupDialogOpen] = useState(false)
@@ -85,38 +192,14 @@ export function Setting() {
     logDays: '90'
   })
 
-  // 初始化从本地存储读取已保存的 API Key 与扣分值
+  // 初始化从本地存储读取已保存的 API Key
   useEffect(() => {
     try {
-      const savedApiKey = localStorage.getItem('appSettings.apiKey') || ''
-      setApiKeySaved(savedApiKey)
-      setApiKeyDraft(savedApiKey)
+      // const savedApiKey = localStorage.getItem('appSettings.apiKey') || ''
+      // setApiKeySaved(savedApiKey)
+      // setApiKeyDraft(savedApiKey)
     } catch {}
-
-    try {
-      const raw = localStorage.getItem('appSettings.deductionValues')
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (
-          typeof parsed === 'object' && parsed &&
-          ['featureA','featureB','featureC'].every(k => typeof parsed[k] === 'number')
-        ) {
-          setDeductionSaved(parsed)
-          setDeductionDraft({
-            featureA: String(parsed.featureA),
-            featureB: String(parsed.featureB),
-            featureC: String(parsed.featureC),
-          })
-        }
-      } else {
-        setDeductionDraft({
-          featureA: String(deductionSaved.featureA),
-          featureB: String(deductionSaved.featureB),
-          featureC: String(deductionSaved.featureC),
-        })
-      }
-    } catch {}
-  }, [deductionSaved.featureA, deductionSaved.featureB, deductionSaved.featureC])
+  }, [])
 
   // 当全局 pageSize 更新时，同步草稿初始值
   useEffect(() => {
@@ -134,7 +217,7 @@ export function Setting() {
   }, [tableBorder])
 
   // 变化状态判断
-  const isApiChanged = apiKeyDraft !== apiKeySaved
+  // const isApiChanged = apiKeyDraft !== apiKeySaved // 未使用，已注释
   const isPageSizeChanged = pageSizeDraft !== String(pageSize)
   const isPageSizeValid = (() => {
     const v = parseInt(pageSizeDraft, 10)
@@ -144,31 +227,18 @@ export function Setting() {
   const isTableBorderChanged = tableBorderDraft !== tableBorder
   const isDisplaySettingsChanged = isPageSizeChanged || isPointsFormatChanged || isTableBorderChanged
   const isDisplaySettingsValid = isPageSizeValid
-  const isDeductionChanged = (
-    deductionDraft.featureA !== String(deductionSaved.featureA) ||
-    deductionDraft.featureB !== String(deductionSaved.featureB) ||
-    deductionDraft.featureC !== String(deductionSaved.featureC)
-  )
-  const isDeductionValid = (() => {
-    const a = parseFloat(deductionDraft.featureA)
-    const b = parseFloat(deductionDraft.featureB)
-    const c = parseFloat(deductionDraft.featureC)
-    const allFilled = [deductionDraft.featureA, deductionDraft.featureB, deductionDraft.featureC].every(v => v.trim() !== '')
-    const allValid = [a, b, c].every(v => Number.isFinite(v) && v >= 0)
-    return allFilled && allValid
-  })()
 
-  // 保存与取消操作
-  const handleSaveApiKey = () => {
-    try {
-      localStorage.setItem('appSettings.apiKey', apiKeyDraft)
-      setApiKeySaved(apiKeyDraft)
-    } catch {}
-  }
+  // 保存与取消操作 - 未使用的函数已注释
+  // const handleSaveApiKey = () => {
+  //   try {
+  //     localStorage.setItem('appSettings.apiKey', apiKeyDraft)
+  //     setApiKeySaved(apiKeyDraft)
+  //   } catch {}
+  // }
 
-  const handleCancelApiKey = () => {
-    setApiKeyDraft(apiKeySaved)
-  }
+  // const handleCancelApiKey = () => {
+  //   setApiKeyDraft(apiKeySaved)
+  // }
 
   // 删除未使用的函数
   // const handleSavePageSize = () => {
@@ -211,26 +281,6 @@ export function Setting() {
     setTableBorderDraft(tableBorder)
   }
 
-  const handleSaveDeduction = () => {
-    try {
-      const saved = {
-        featureA: parseFloat(deductionDraft.featureA),
-        featureB: parseFloat(deductionDraft.featureB),
-        featureC: parseFloat(deductionDraft.featureC),
-      }
-      localStorage.setItem('appSettings.deductionValues', JSON.stringify(saved))
-      setDeductionSaved(saved)
-    } catch {}
-  }
-
-  const handleCancelDeduction = () => {
-    setDeductionDraft({
-      featureA: String(deductionSaved.featureA),
-      featureB: String(deductionSaved.featureB),
-      featureC: String(deductionSaved.featureC),
-    })
-  }
-
   // 清除数据功能处理函数
   const handleCleanupConfirm = (type: 'users' | 'cards' | 'logs') => {
     setCleanupType(type)
@@ -267,345 +317,347 @@ export function Setting() {
     }
   }
 
-  return (
-    <div className="px-6 pt-1 pb-4 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>API Key 设置</CardTitle>
-          <CardDescription>管理您的第三方服务 API Key。</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Label htmlFor="apiKey" className="min-w-[100px]">服务 API Key</Label>
-            <Input
-              id="apiKey"
-              type="password"
-              value={apiKeyDraft}
-              onChange={(e) => setApiKeyDraft(e.target.value)}
-              className="max-w-md"
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="border-t px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={handleSaveApiKey}
-              disabled={!isApiChanged}
-              className="w-full sm:w-auto"
-            >
-              保存更改
-            </Button>
-            {isApiChanged && (
-              <Button
-                variant="outline"
-                onClick={handleCancelApiKey}
-                className="w-full sm:w-auto"
-              >
-                取消
-              </Button>
-            )}
-          </div>
-        </CardFooter>
-      </Card>
+  // 标签页配置
+  const tabs = [
+    { id: 'apikey' as SettingTabType, label: 'API Key 设置' },
+    { id: 'display' as SettingTabType, label: '显示设置' },
+    { id: 'deduction' as SettingTabType, label: '功能设置' },
+    { id: 'cleanup' as SettingTabType, label: '清除数据' }
+  ]
 
-      <Card>
-        <CardHeader>
-          <CardTitle>显示设置</CardTitle>
-          <CardDescription>自定义数据表格的显示方式。</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Label htmlFor="pageSize" className="min-w-[100px]">单页显示数量</Label>
-            <Input
-              id="pageSize"
-              type="number"
-              value={pageSizeDraft}
-              onChange={(e) => setPageSizeDraft(normalizeNumericInput(e.target.value, { allowDecimal: false }))}
-              className="w-24"
-            />
-            <span className="text-sm text-muted-foreground">条</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Label htmlFor="pointsFormat" className="min-w-[100px]">积分显示格式</Label>
-            <Select
-              value={pointsFormatDraft}
-              onValueChange={(value: 'integer' | 'decimal') => setPointsFormatDraft(value)}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="integer">整数</SelectItem>
-                <SelectItem value="decimal">2位小数</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-4">
-            <Label htmlFor="tableBorder" className="min-w-[100px]">表格边框选择</Label>
-            <Select
-              value={tableBorderDraft}
-              onValueChange={(value: TableBorderType) => setTableBorderDraft(value)}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="horizontal">横线</SelectItem>
-                <SelectItem value="vertical">竖线</SelectItem>
-                <SelectItem value="both">横线和竖线</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-        <CardFooter className="border-t px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={handleSaveDisplaySettings}
-              disabled={!isDisplaySettingsChanged || !isDisplaySettingsValid}
-              className="w-full sm:w-auto"
-            >
-              保存显示设置
-            </Button>
-            {isDisplaySettingsChanged && (
-              <Button
-                variant="outline"
-                onClick={handleCancelDisplaySettings}
-                className="w-full sm:w-auto"
-              >
-                取消
-              </Button>
-            )}
-          </div>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>功能扣分值设置</CardTitle>
-          <CardDescription>为不同功能设置基础的积分扣除值。</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Label htmlFor="featureA" className="min-w-[180px] flex-shrink-0">新用户注册赠送积分</Label>
-            <Input
-              id="featureA"
-              type="text"
-              inputMode="decimal"
-              value={deductionDraft.featureA}
-              onChange={(e) => setDeductionDraft(prev => ({ ...prev, featureA: normalizeNumericInput(e.target.value, { allowDecimal: true }) }))}
-              className="w-24"
-            />
-            <span className="text-sm text-muted-foreground">分/次</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Label htmlFor="featureB" className="min-w-[180px] flex-shrink-0">功能 B</Label>
-            <Input
-              id="featureB"
-              type="text"
-              inputMode="decimal"
-              value={deductionDraft.featureB}
-              onChange={(e) => setDeductionDraft(prev => ({ ...prev, featureB: normalizeNumericInput(e.target.value, { allowDecimal: true }) }))}
-              className="w-24"
-            />
-            <span className="text-sm text-muted-foreground">分/次</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Label htmlFor="featureC" className="min-w-[180px] flex-shrink-0">功能 C</Label>
-            <Input
-              id="featureC"
-              type="text"
-              inputMode="decimal"
-              value={deductionDraft.featureC}
-              onChange={(e) => setDeductionDraft(prev => ({ ...prev, featureC: normalizeNumericInput(e.target.value, { allowDecimal: true }) }))}
-              className="w-24"
-            />
-            <span className="text-sm text-muted-foreground">分/次</span>
-          </div>
-        </CardContent>
-        <CardFooter className="border-t px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={handleSaveDeduction}
-              disabled={!isDeductionChanged || !isDeductionValid}
-              className="w-full sm:w-auto"
-            >
-              保存更改
-            </Button>
-            {isDeductionChanged && (
-              <Button
-                variant="outline"
-                onClick={handleCancelDeduction}
-                className="w-full sm:w-auto"
-              >
-                取消
-              </Button>
-            )}
-          </div>
-        </CardFooter>
-      </Card>
-
-      {/* 清除数据设置 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>清除数据</CardTitle>
-          <CardDescription>清理系统中的过期数据，释放存储空间。</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* 清除长时间未登录用户 */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">清除长时间未登录用户</h4>
-                <p className="text-sm text-muted-foreground">删除长时间未登录且积分较低的用户账号</p>
+  // 渲染标签页内容
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'apikey':
+        return (
+          <div className="space-y-6">
+            {/* API Key 卡片列表 */}
+            <div className="w-full px-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 w-full">
+                {/* 现有 API Key 卡片 */}
+                {apiKeys.map((apiKey) => (
+                  <ApiKeyCard
+                    key={apiKey.id}
+                    id={apiKey.id}
+                    title={apiKey.title}
+                    apiKey={apiKey.key}
+                    provider={apiKey.provider}
+                    onUpdate={handleUpdateApiKey}
+                    onDelete={handleDeleteApiKey}
+                    isNew={apiKey.isNew}
+                  />
+                ))}
+                
+                {/* 添加 API Key 卡片 */}
+                <AddApiKeyCard onClick={handleAddApiKey} />
               </div>
             </div>
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="userDays" className="text-sm">未登录天数</Label>
-                <Input
-                  id="userDays"
-                  type="number"
-                  value={cleanupSettings.userDays}
-                  onChange={(e) => setCleanupSettings(prev => ({ ...prev, userDays: e.target.value }))}
-                  className="w-20"
-                  min="1"
-                />
-                <span className="text-sm text-muted-foreground">天</span>
+
+            {/* 空状态 */}
+            {apiKeys.length === 0 && (
+              <div className="col-span-full text-center py-8">
+                <p className="text-muted-foreground text-sm">
+                  还没有添加任何 API Key，点击上方卡片开始添加
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="userPointsLimit" className="text-sm">且积分 ≤</Label>
-                <Input
-                  id="userPointsLimit"
-                  type="number"
-                  value={cleanupSettings.userPointsLimit}
-                  onChange={(e) => setCleanupSettings(prev => ({ ...prev, userPointsLimit: e.target.value }))}
-                  className="w-20"
-                  min="0"
-                />
-                <span className="text-sm text-muted-foreground">分</span>
-              </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleCleanupConfirm('users')}
-              >
-                清除用户
-              </Button>
-            </div>
+            )}
           </div>
+        )
 
-          <Separator />
-
-          {/* 清除兑换卡 */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">清除兑换卡</h4>
-                <p className="text-sm text-muted-foreground">删除指定天数前创建的兑换卡</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="cardDays" className="text-sm">创建时间超过</Label>
+      case 'display':
+        return (
+          <Card className="w-full max-w-4xl min-w-[300px]">
+            <CardHeader>
+              <CardTitle>显示设置</CardTitle>
+              <CardDescription>自定义数据表格的显示方式。</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Label htmlFor="pageSize" className="min-w-[100px]">单页显示数量</Label>
                 <Input
-                  id="cardDays"
+                  id="pageSize"
                   type="number"
-                  value={cleanupSettings.cardDays}
-                  onChange={(e) => setCleanupSettings(prev => ({ ...prev, cardDays: e.target.value }))}
-                  className="w-20"
-                  min="1"
+                  value={pageSizeDraft}
+                  onChange={(e) => setPageSizeDraft(normalizeNumericInput(e.target.value, { allowDecimal: false }))}
+                  className="w-24"
                 />
-                <span className="text-sm text-muted-foreground">天</span>
+                <span className="text-sm text-muted-foreground">条</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="cardStatus" className="text-sm">状态为</Label>
+              <div className="flex items-center gap-4">
+                <Label htmlFor="pointsFormat" className="min-w-[100px]">积分显示格式</Label>
                 <Select
-                  value={cleanupSettings.cardStatus}
-                  onValueChange={(value) => setCleanupSettings(prev => ({ ...prev, cardStatus: value }))}
+                  value={pointsFormatDraft}
+                  onValueChange={(value: 'integer' | 'decimal') => setPointsFormatDraft(value)}
                 >
-                  <SelectTrigger className="w-24">
+                  <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="redeemed">已兑换</SelectItem>
-                    <SelectItem value="all">所有状态</SelectItem>
+                    <SelectItem value="integer">整数</SelectItem>
+                    <SelectItem value="decimal">2位小数</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleCleanupConfirm('cards')}
-              >
-                清除兑换卡
-              </Button>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* 清除积分日志 */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">清除积分日志</h4>
-                <p className="text-sm text-muted-foreground">删除指定天数前的积分变动记录</p>
+              <div className="flex items-center gap-4">
+                <Label htmlFor="tableBorder" className="min-w-[100px]">表格边框选择</Label>
+                <Select
+                  value={tableBorderDraft}
+                  onValueChange={(value: TableBorderType) => setTableBorderDraft(value)}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="horizontal">横线</SelectItem>
+                    <SelectItem value="vertical">竖线</SelectItem>
+                    <SelectItem value="both">横线和竖线</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="logDays" className="text-sm">记录时间超过</Label>
-                <Input
-                  id="logDays"
-                  type="number"
-                  value={cleanupSettings.logDays}
-                  onChange={(e) => setCleanupSettings(prev => ({ ...prev, logDays: e.target.value }))}
-                  className="w-20"
-                  min="1"
-                />
-                <span className="text-sm text-muted-foreground">天</span>
+            </CardContent>
+            <CardFooter className="border-t px-6 py-4">
+              <div className="flex items-center gap-4">
+                <Button
+                  onClick={handleSaveDisplaySettings}
+                  disabled={!isDisplaySettingsChanged || !isDisplaySettingsValid}
+                  className="w-full sm:w-auto"
+                >
+                  保存显示设置
+                </Button>
+                {isDisplaySettingsChanged && (
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelDisplaySettings}
+                    className="w-full sm:w-auto"
+                  >
+                    取消
+                  </Button>
+                )}
               </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleCleanupConfirm('logs')}
-              >
-                清除日志
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardFooter>
+          </Card>
+        )
 
-      {/* 清除确认对话框 */}
-      <Dialog open={isCleanupDialogOpen} onOpenChange={setIsCleanupDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>确认清除操作</DialogTitle>
-            <DialogDescription>
-               {cleanupType === 'users' && `即将清除 ${cleanupSettings.userDays} 天未登录且积分 ≤ ${cleanupSettings.userPointsLimit} 的用户账号。`}
-               {cleanupType === 'cards' && `即将清除 ${cleanupSettings.cardDays} 天前创建且状态为${cleanupSettings.cardStatus === 'all' ? '所有状态' : '已兑换'}的兑换卡。`}
-               {cleanupType === 'logs' && `即将清除 ${cleanupSettings.logDays} 天前的积分日志记录。`}
-               <br />
-               <strong className="text-red-600">此操作不可撤销，请谨慎操作！</strong>
-             </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsCleanupDialogOpen(false)}
+      case 'deduction':
+        const templateCards = [
+          ...templates.map((template) => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              onUpdate={handleUpdateTemplate}
+              onDelete={handleDeleteTemplate}
+            />
+          )),
+          <AddTemplateCard key="add-template" onClick={handleAddTemplate} />
+        ]
+        
+        return (
+          <MasonryLayout
+            columns={{ default: 1, md: 2, lg: 4 }}
+            gap={16}
+            className="w-full"
+          >
+            {templateCards}
+          </MasonryLayout>
+        )
+
+      case 'cleanup':
+        return (
+          <>
+            <Card className="w-full max-w-4xl min-w-[600px]">
+              <CardHeader>
+                <CardTitle>清除数据</CardTitle>
+                <CardDescription>清理系统中的过期数据，释放存储空间。</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* 清除长时间未登录用户 */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">清除长时间未登录用户</h4>
+                      <p className="text-sm text-muted-foreground">删除长时间未登录且积分较低的用户账号</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="userDays" className="text-sm">未登录天数</Label>
+                      <Input
+                        id="userDays"
+                        type="number"
+                        value={cleanupSettings.userDays}
+                        onChange={(e) => setCleanupSettings(prev => ({ ...prev, userDays: e.target.value }))}
+                        className="w-20"
+                        min="1"
+                      />
+                      <span className="text-sm text-muted-foreground">天</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="userPointsLimit" className="text-sm">且积分 ≤</Label>
+                      <Input
+                        id="userPointsLimit"
+                        type="number"
+                        value={cleanupSettings.userPointsLimit}
+                        onChange={(e) => setCleanupSettings(prev => ({ ...prev, userPointsLimit: e.target.value }))}
+                        className="w-20"
+                        min="0"
+                      />
+                      <span className="text-sm text-muted-foreground">分</span>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleCleanupConfirm('users')}
+                    >
+                      清除用户
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* 清除兑换卡 */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">清除兑换卡</h4>
+                      <p className="text-sm text-muted-foreground">删除指定天数前创建的兑换卡</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="cardDays" className="text-sm">创建时间超过</Label>
+                      <Input
+                        id="cardDays"
+                        type="number"
+                        value={cleanupSettings.cardDays}
+                        onChange={(e) => setCleanupSettings(prev => ({ ...prev, cardDays: e.target.value }))}
+                        className="w-20"
+                        min="1"
+                      />
+                      <span className="text-sm text-muted-foreground">天</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="cardStatus" className="text-sm">状态为</Label>
+                      <Select
+                        value={cleanupSettings.cardStatus}
+                        onValueChange={(value) => setCleanupSettings(prev => ({ ...prev, cardStatus: value }))}
+                      >
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="redeemed">已兑换</SelectItem>
+                          <SelectItem value="all">所有状态</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleCleanupConfirm('cards')}
+                    >
+                      清除兑换卡
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* 清除积分日志 */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">清除积分日志</h4>
+                      <p className="text-sm text-muted-foreground">删除指定天数前的积分变动记录</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="logDays" className="text-sm">记录时间超过</Label>
+                      <Input
+                        id="logDays"
+                        type="number"
+                        value={cleanupSettings.logDays}
+                        onChange={(e) => setCleanupSettings(prev => ({ ...prev, logDays: e.target.value }))}
+                        className="w-20"
+                        min="1"
+                      />
+                      <span className="text-sm text-muted-foreground">天</span>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleCleanupConfirm('logs')}
+                    >
+                      清除日志
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 清除确认对话框 */}
+            <Dialog open={isCleanupDialogOpen} onOpenChange={setIsCleanupDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>确认清除操作</DialogTitle>
+                  <DialogDescription>
+                     {cleanupType === 'users' && `即将清除 ${cleanupSettings.userDays} 天未登录且积分 ≤ ${cleanupSettings.userPointsLimit} 的用户账号。`}
+                     {cleanupType === 'cards' && `即将清除 ${cleanupSettings.cardDays} 天前创建且状态为${cleanupSettings.cardStatus === 'all' ? '所有状态' : '已兑换'}的兑换卡。`}
+                     {cleanupType === 'logs' && `即将清除 ${cleanupSettings.logDays} 天前的积分日志记录。`}
+                     <br />
+                     <strong className="text-red-600">此操作不可撤销，请谨慎操作！</strong>
+                   </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCleanupDialogOpen(false)}
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleCleanupExecute}
+                  >
+                    确认清除
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="px-6 pt-1 pb-4 space-y-6">
+      {/* 标签页导航 */}
+      <div className="border-b dark:border-gray-600">
+        <nav className="-mb-px flex space-x-8">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600 dark:border-white dark:text-white'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-500'
+              }`}
             >
-              取消
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCleanupExecute}
-            >
-              确认清除
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* 标签页内容 */}
+      {renderTabContent()}
+
+
     </div>
   )
 }
