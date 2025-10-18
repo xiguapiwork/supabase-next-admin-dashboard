@@ -19,10 +19,10 @@ export function AddTemplateCard({ onClick }: AddTemplateCardProps) {
             <Plus className="h-8 w-8 text-blue-600" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-medium text-gray-800 leading-relaxed">
+            <h3 className="text-lg font-medium text-gray-800 dark:text-white leading-relaxed">
               模版管理
             </h3>
-            <p className="text-sm text-gray-600 leading-tight max-w-xs">
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-tight max-w-xs">
               创建和管理功能模版，快速应用到不同场景
             </p>
           </div>

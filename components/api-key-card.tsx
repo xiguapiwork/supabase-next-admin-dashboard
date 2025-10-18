@@ -105,9 +105,9 @@ export function ApiKeyCard({
           variant="ghost"
           size="sm"
           onClick={handleCancel}
-          className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full bg-white border border-gray-200 hover:bg-gray-50 shadow-sm z-10"
+          className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm z-10"
         >
-          <X className="h-3 w-3" />
+          <X className="h-3 w-3 text-black dark:text-white" />
         </Button>
       )}
       
@@ -127,7 +127,7 @@ export function ApiKeyCard({
               <Switch
                 checked={isEnabled}
                 onCheckedChange={setIsEnabled}
-                className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-300 scale-125"
+                className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 scale-125"
               />
             </div>
           )}

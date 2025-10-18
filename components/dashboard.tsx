@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAppSettings } from "@/contexts/AppSettingsContext"
 import { formatPoints } from "@/lib/format-points"
+import { RecentExchangeCard } from "@/components/recent-exchange-card"
+import { PointsConsumptionCard } from "@/components/points-consumption-card"
 import { 
   Users, 
   Activity, 
@@ -547,16 +549,18 @@ export function Dashboard() {
           </div>
         </div>
       ) : (
-        <div className={`grid gap-6 ${(activeTab === 'points' || activeTab === 'users' || activeTab === 'logs') ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
-          {getStatsForTab(activeTab).map((stat, index) => (
-            <Card key={index} className={activeTab === 'points' && index === 0 ? 'md:col-span-2 lg:col-span-1' : ''}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="pt-6">
+        <div className="space-y-6">
+          {/* 用户情况卡片 */}
+          <div className={`grid gap-6 ${(activeTab === 'points' || activeTab === 'users' || activeTab === 'logs') ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
+            {getStatsForTab(activeTab).map((stat, index) => (
+              <Card key={index} className={activeTab === 'points' && index === 0 ? 'md:col-span-2 lg:col-span-1' : ''}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {stat.title}
+                  </CardTitle>
+                  <stat.icon className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent className="pt-6">
                 {/* 特殊处理积分卡情况和用户情况的卡片 */}
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {((activeTab === 'points' && (index === 0 || index === 1)) || (activeTab === 'users' && (index === 0 || index === 1)) || (activeTab === 'logs' && (index === 0 || index === 1))) && (stat as any).multipleValues ? (
@@ -796,6 +800,19 @@ export function Dashboard() {
               </CardContent>
             </Card>
           ))}
+          </div>
+          
+          {/* 最近兑换记录和积分消耗卡片 - 仅在用户情况标签页显示 */}
+          {activeTab === 'users' && (
+            <div className="mt-6 flex gap-6">
+              <div className="w-1/3 min-w-[400px]">
+                <RecentExchangeCard />
+              </div>
+              <div className="w-1/3 min-w-[400px]">
+                <PointsConsumptionCard />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -54,10 +54,10 @@ export function AddApiKeyCard({ onClick }: AddApiKeyCardProps) {
             <Plus className="h-6 w-6 text-slate-600" />
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-medium text-gray-700 leading-relaxed">
+            <p className="text-sm font-medium text-gray-700 dark:text-white leading-relaxed">
               增加您的第三方服务 KEY
             </p>
-            <p className="text-xs text-gray-500 leading-tight">
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
               为了安全，添加后您将无法查看和复制完整API KEY
             </p>
           </div>

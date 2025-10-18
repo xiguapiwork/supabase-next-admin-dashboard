@@ -186,7 +186,7 @@ export function TemplateCard({ template, onUpdate, onDelete }: TemplateCardProps
   return (
     <>
       <Card className="w-full h-fit min-w-[300px]">
-        <CardHeader className="pb-2 p-3">
+        <CardHeader className="px-3 pt-3 pb-1">
           {isEditMode ? (
             <Input
               value={titleDraft}
@@ -200,25 +200,42 @@ export function TemplateCard({ template, onUpdate, onDelete }: TemplateCardProps
             </div>
           )}
         </CardHeader>
-        <CardContent className="space-y-2 pt-2 p-4">
+        <CardContent className="space-y-2 px-3 pb-3 pt-2">
           {featuresDraft.map((feature, index) => (
             <div key={feature.id} className="flex items-center gap-2">
               {/* 序号 */}
-              <span className="text-sm text-muted-foreground font-medium w-6 text-right">
+              <span className="text-sm text-muted-foreground font-medium w-6 h-9 flex items-center justify-center">
                 {index + 1}.
               </span>
               
               {/* 功能名称 - 条件渲染 */}
               {isEditMode || editableFeatures.has(feature.id) ? (
-                <Input
-                  type="text"
+                <textarea
                   value={feature.name}
                   onChange={(e) => handleUpdateFeature(feature.id, 'name', e.target.value)}
-                  className="flex-1 min-w-[100px] max-w-[200px]"
+                  className="flex-1 min-w-[100px] rounded-md border border-gray-300 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground resize-none outline-none"
                   placeholder="请输入名称"
+                  rows={1}
+                  style={{
+                    height: '2.25rem',
+                    overflow: 'hidden',
+                    minHeight: '2.25rem'
+                  }}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = Math.max(36, target.scrollHeight) + 'px';
+                  }}
+                  ref={(textarea) => {
+                    if (textarea) {
+                      // 初始化时也调整高度
+                      textarea.style.height = 'auto';
+                      textarea.style.height = Math.max(36, textarea.scrollHeight) + 'px';
+                    }
+                  }}
                 />
               ) : (
-                <div className="flex-1 min-w-[100px] max-w-[200px] px-3 py-2 text-sm">
+                <div className="flex-1 min-w-[100px] px-3 py-2 text-sm whitespace-pre-wrap">
                   {feature.name || "请输入名称"}
                 </div>
               )}
@@ -265,7 +282,7 @@ export function TemplateCard({ template, onUpdate, onDelete }: TemplateCardProps
             }}
           >
             {/* 序号位置对齐 */}
-            <span className="text-sm text-muted-foreground font-medium w-6 text-right">
+            <div className="w-6 h-9 flex items-center justify-center">
               <Button
                 variant="ghost"
                 size="sm"
@@ -274,8 +291,8 @@ export function TemplateCard({ template, onUpdate, onDelete }: TemplateCardProps
               >
                 <Plus className="h-3 w-3" />
               </Button>
-            </span>
-            <span className="text-sm text-muted-foreground flex-1 min-w-[100px] max-w-[200px] px-3 py-2">添加功能</span>
+            </div>
+            <span className="text-sm text-muted-foreground flex-1 min-w-[100px] px-3 py-2">添加功能</span>
             
             {/* 积分输入框位置占位 - 保持对齐 */}
             <div className="w-16"></div>
@@ -295,7 +312,7 @@ export function TemplateCard({ template, onUpdate, onDelete }: TemplateCardProps
                   variant="outline"
                   size="sm"
                   onClick={handleEditFeatures}
-                  className="text-black hover:text-black hover:bg-gray-50 border-gray-200 hover:border-gray-300"
+                  className="text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                 >
                   编辑
                 </Button>

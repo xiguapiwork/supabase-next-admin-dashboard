@@ -23,6 +23,7 @@ export function MasonryLayout({
   const [columnCount, setColumnCount] = useState(columns.default)
   const [isClient, setIsClient] = useState(false)
   const [containerWidth, setContainerWidth] = useState(0)
+  const [isLayoutReady, setIsLayoutReady] = useState(false)
 
   // 确保在客户端渲染
   useEffect(() => {
@@ -87,13 +88,14 @@ export function MasonryLayout({
       calculatedPercentage: (columnWidth / containerWidth * 100).toFixed(2) + '%'
     })
 
-    // 重置所有项目的样式 - 添加过渡效果
+    // 重置所有项目的样式 - 移除过渡效果避免初始化动画
     items.forEach(item => {
       item.style.position = 'absolute'
       item.style.top = '0'
       item.style.left = '0'
       item.style.width = `${columnWidth}px`
-      item.style.transition = 'all 0.3s ease-out' // 添加平滑过渡
+      // 只在布局准备好后添加过渡效果
+      item.style.transition = isLayoutReady ? 'all 0.3s ease-out' : 'none'
     })
 
     // 使用多次requestAnimationFrame确保元素已完全渲染
@@ -121,9 +123,14 @@ export function MasonryLayout({
         // 设置容器高度
         const maxHeight = Math.max(...columnHeights) - gap
         container.style.height = `${maxHeight}px`
+        
+        // 布局计算完成后设置为准备状态
+        if (!isLayoutReady) {
+          setIsLayoutReady(true)
+        }
       })
     })
-  }, [columnCount, gap, isClient, containerWidth])
+  }, [columnCount, gap, isClient, containerWidth, isLayoutReady])
 
   // 当依赖项变化时重新计算布局
   useEffect(() => {
@@ -146,7 +153,9 @@ export function MasonryLayout({
       style={{ 
         position: 'relative',
         minWidth: columnCount === 4 ? '1248px' : undefined,
-        transition: 'min-width 0.3s ease-out' // 添加容器过渡效果
+        transition: 'min-width 0.3s ease-out', // 添加容器过渡效果
+        opacity: isLayoutReady ? 1 : 0, // 布局准备好后才显示
+        visibility: isLayoutReady ? 'visible' : 'hidden' // 避免初始化时的闪烁
       }}
     >
       {children}

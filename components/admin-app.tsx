@@ -389,7 +389,7 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
             </DialogContent>
           </Dialog>
         )
-      case '/points-card':
+      case '/exchange-cards':
         return (
           <div className="flex gap-2">
             <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
