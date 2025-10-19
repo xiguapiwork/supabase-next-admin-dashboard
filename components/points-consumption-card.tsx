@@ -13,7 +13,7 @@ const recentActiveUsers = [
     user: {
       name: '张三',
       email: 'zhangsan@example.com',
-      avatar: '/avatars/zhangsan.jpg'
+      avatar: '/default-avatar/菠萝.png'
     },
     points: 150,
     time: '07-20 14:30'
@@ -23,7 +23,7 @@ const recentActiveUsers = [
     user: {
       name: '李四',
       email: 'lisi@example.com',
-      avatar: '/avatars/lisi.jpg'
+      avatar: '/default-avatar/蓝莓.png'
     },
     points: 200,
     time: '07-19 16:45'
@@ -33,7 +33,7 @@ const recentActiveUsers = [
     user: {
       name: '王五',
       email: 'wangwu@example.com',
-      avatar: '/avatars/wangwu.jpg'
+      avatar: '/default-avatar/西瓜.png'
     },
     points: 80,
     time: '07-19 13:20'
@@ -43,7 +43,7 @@ const recentActiveUsers = [
     user: {
       name: '赵六',
       email: 'zhaoliu@example.com',
-      avatar: '/avatars/zhaoliu.jpg'
+      avatar: '/default-avatar/鸭梨.png'
     },
     points: 300,
     time: '07-18 10:15'
@@ -53,7 +53,7 @@ const recentActiveUsers = [
     user: {
       name: '钱七',
       email: 'qianqi@example.com',
-      avatar: '/avatars/qianqi.jpg'
+      avatar: '/default-avatar/苹果.png'
     },
     points: 120,
     time: '07-18 09:30'
@@ -76,9 +76,9 @@ export function PointsConsumptionCard() {
   const totalCount = selectedCount === '10条' ? 10 : 30
 
   return (
-    <Card>
-      <CardHeader className="pb-4 !flex !flex-row !items-center !justify-between !space-y-0">
-        <CardTitle className="text-base sm:text-lg md:text-xl lg:text-2xl flex items-center">积分消耗记录</CardTitle>
+    <Card style={{ width: '400px' }} className="flex-shrink-0">
+      <CardHeader className="pb-2 pt-4 !flex !flex-row !items-center !justify-between !space-y-0">
+        <CardTitle className="text-xs sm:text-sm md:text-base lg:text-lg flex items-center">积分消耗记录</CardTitle>
         <div className="flex gap-2 items-center">
           <ToggleGroupCustom
             options={periodOptions}
@@ -94,13 +94,13 @@ export function PointsConsumptionCard() {
           />
         </div>
       </CardHeader>
-      <CardContent className="pt-2">
+      <CardContent className="pt-1">
         <div className="space-y-4">
           {filteredRecords.map((record) => (
             <div key={record.id} className="flex items-center justify-between px-[4%] py-[2%] border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 aspect-[5/1]">
               {/* 左侧：用户头像、用户名、邮箱 */}
               <div className="flex items-center">
-                <Avatar className="aspect-square h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 flex-shrink-0">
+                <Avatar className="aspect-square flex-shrink-0">
                   <AvatarImage src={record.user.avatar} alt={record.user.name} />
                   <AvatarFallback className="text-[clamp(0.75rem,2.5vw,1rem)]">
                     {record.user.name.charAt(0)}
@@ -118,10 +118,10 @@ export function PointsConsumptionCard() {
               
               {/* 右侧：积分消耗和时间 */}
               <div className="flex flex-col items-end">
-                <div className="text-[clamp(0.7rem,1.8vw,0.85rem)] font-bold text-red-600 dark:text-red-400">
+                <div className="text-[clamp(0.6rem,1.5vw,0.7rem)] font-bold text-red-600 dark:text-red-400">
                   -{record.points}
                 </div>
-                <div className="text-[clamp(0.6rem,1.5vw,0.75rem)] text-gray-500 dark:text-gray-400">
+                <div className="text-[clamp(0.5rem,1.2vw,0.6rem)] text-gray-500 dark:text-gray-400">
                   {record.time}
                 </div>
               </div>

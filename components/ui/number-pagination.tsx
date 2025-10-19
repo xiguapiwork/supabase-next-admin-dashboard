@@ -38,7 +38,7 @@ export function NumberPagination({ totalItems, className }: NumberPaginationProp
                 key={number}
                 onClick={() => setSelectedNumber(number)}
                 className={cn(
-                  "w-8 h-8 text-xs font-medium transition-colors focus:outline-none",
+                  "w-6 h-6 text-xs font-medium transition-colors focus:outline-none",
                   "border border-gray-200 dark:border-gray-700",
                   {
                     "rounded-l": isFirst,

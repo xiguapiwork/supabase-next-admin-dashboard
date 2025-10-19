@@ -19,42 +19,39 @@ const ExchangeCardsSituationCard: React.FC<ExchangeCardsSituationCardProps> = ({
       onClick={onClick}
       className={`cursor-pointer ${isSelected ? 'border-primary' : ''}`}
     >
-      <CardHeader>
+      <CardHeader className="pb-2 px-4 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-bold">
-            总兑换卡数量
+          <CardTitle className="text-base font-bold">
+            积分卡
           </CardTitle>
           <CreditCard className="h-4 w-4 text-gray-400" />
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          已兑换积分卡与总积分卡情况
-        </p>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 pt-0 px-4 pb-4">
         {/* 状态标签和数字 */}
         <div className="flex items-center justify-between">
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            已兑换积分卡/总积分卡
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            已兑换/总卡片数
           </div>
-          <div className="text-base">
+          <div className="text-sm">
             {redeemedCards.toLocaleString()} / <span className="font-bold">{totalCards.toLocaleString()}</span>
           </div>
         </div>
 
         {/* 进度条 */}
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
           <div 
-            className="bg-black dark:bg-white h-2 rounded-full transition-all duration-300"
+            className="bg-black dark:bg-white h-1.5 rounded-full transition-all duration-300"
             style={{ width: `${redemptionRate}%` }}
           ></div>
         </div>
 
         {/* 底部信息 */}
         <div className="flex items-center justify-between">
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
             兑换率
           </div>
-          <div className="text-sm font-bold">
+          <div className="text-xs font-bold">
             {redemptionRate}%
           </div>
         </div>

@@ -33,11 +33,11 @@ export function Dashboard() {
   return (
     <div className="flex flex-col gap-4 px-5 pt-1 pb-5">
       <DashboardSummary activeMetric={activeMetric} setActiveMetric={setActiveMetric} />
-      <div className="grid grid-cols-7 gap-4">
-        <div className="col-span-5">
+      <div className="flex gap-4">
+        <div className="flex-1 min-w-0">
           {renderChart()}
         </div>
-        <div className="col-span-2">
+        <div className="flex-shrink-0">
           <RecentRegistrationCard />
         </div>
       </div>
