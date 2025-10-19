@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ToggleGroupCustom } from '@/components/ui/toggle-group-custom'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useAppSettings } from '@/contexts/AppSettingsContext'
-import type { TableBorderType } from '@/contexts/AppSettingsContext'
+import type { TableBorderType, CardCountType } from '@/contexts/AppSettingsContext'
 import { toast } from 'sonner'
 import { ApiKeyCard } from '@/components/api-key-card'
 import { AddApiKeyCard } from '@/components/add-api-key-card'
@@ -174,10 +175,11 @@ export function Setting() {
   // const [apiKeyDraft, setApiKeyDraft] = useState('')
 
   // 显示设置 - 分页数量（使用全局设置作为已保存值），草稿允许空值
-  const { pageSize, setPageSize, pointsFormat, setPointsFormat, tableBorder, setTableBorder } = useAppSettings()
+  const { pageSize, setPageSize, pointsFormat, setPointsFormat, tableBorder, setTableBorder, cardCount, setCardCount } = useAppSettings()
   const [pageSizeDraft, setPageSizeDraft] = useState<string>(String(pageSize))
   const [pointsFormatDraft, setPointsFormatDraft] = useState<'integer' | 'decimal'>(pointsFormat)
   const [tableBorderDraft, setTableBorderDraft] = useState<TableBorderType>('horizontal')
+  const [cardCountDraft, setCardCountDraft] = useState<CardCountType>(cardCount)
 
 
 
@@ -216,6 +218,11 @@ export function Setting() {
     setTableBorderDraft(tableBorder)
   }, [tableBorder])
 
+  // 当全局 cardCount 更新时，同步草稿初始值
+  useEffect(() => {
+    setCardCountDraft(cardCount)
+  }, [cardCount])
+
   // 变化状态判断
   // const isApiChanged = apiKeyDraft !== apiKeySaved // 未使用，已注释
   const isPageSizeChanged = pageSizeDraft !== String(pageSize)
@@ -225,7 +232,8 @@ export function Setting() {
   })()
   const isPointsFormatChanged = pointsFormatDraft !== pointsFormat
   const isTableBorderChanged = tableBorderDraft !== tableBorder
-  const isDisplaySettingsChanged = isPageSizeChanged || isPointsFormatChanged || isTableBorderChanged
+  const isCardCountChanged = cardCountDraft !== cardCount
+  const isDisplaySettingsChanged = isPageSizeChanged || isPointsFormatChanged || isTableBorderChanged || isCardCountChanged
   const isDisplaySettingsValid = isPageSizeValid
 
   // 保存与取消操作 - 未使用的函数已注释
@@ -272,6 +280,9 @@ export function Setting() {
     if (isTableBorderChanged) {
       setTableBorder(tableBorderDraft)
     }
+    if (isCardCountChanged) {
+      setCardCount(cardCountDraft)
+    }
     toast.success('显示设置已保存')
   }
 
@@ -279,6 +290,7 @@ export function Setting() {
     setPageSizeDraft(String(pageSize))
     setPointsFormatDraft(pointsFormat)
     setTableBorderDraft(tableBorder)
+    setCardCountDraft(cardCount)
   }
 
   // 清除数据功能处理函数
@@ -385,34 +397,33 @@ export function Setting() {
               </div>
               <div className="flex items-center gap-4">
                 <Label htmlFor="pointsFormat" className="min-w-[100px]">积分显示格式</Label>
-                <Select
-                  value={pointsFormatDraft}
-                  onValueChange={(value: 'integer' | 'decimal') => setPointsFormatDraft(value)}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="integer">整数</SelectItem>
-                    <SelectItem value="decimal">2位小数</SelectItem>
-                  </SelectContent>
-                </Select>
+                <ToggleGroupCustom
+                  options={['整数', '两位小数']}
+                  value={pointsFormatDraft === 'integer' ? '整数' : '两位小数'}
+                  onValueChange={(value: string) => setPointsFormatDraft(value === '整数' ? 'integer' : 'decimal')}
+                  className="h-10"
+                  textSize="text-sm"
+                />
               </div>
               <div className="flex items-center gap-4">
                 <Label htmlFor="tableBorder" className="min-w-[100px]">表格边框选择</Label>
-                <Select
-                  value={tableBorderDraft}
-                  onValueChange={(value: TableBorderType) => setTableBorderDraft(value)}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="horizontal">横线</SelectItem>
-                    <SelectItem value="vertical">竖线</SelectItem>
-                    <SelectItem value="both">横线和竖线</SelectItem>
-                  </SelectContent>
-                </Select>
+                <ToggleGroupCustom
+                  options={['横线', '竖线', '横竖线']}
+                  value={tableBorderDraft === 'horizontal' ? '横线' : tableBorderDraft === 'vertical' ? '竖线' : '横竖线'}
+                  onValueChange={(value: string) => setTableBorderDraft(value === '横线' ? 'horizontal' : value === '竖线' ? 'vertical' : 'both')}
+                  className="h-10"
+                  textSize="text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <Label htmlFor="cardCount" className="min-w-[100px]">看板显示数量</Label>
+                <ToggleGroupCustom
+                  options={['10条', '20条', '30条', '40条']}
+                  value={`${cardCountDraft}条`}
+                  onValueChange={(value: string) => setCardCountDraft(parseInt(value.replace('条', '')) as CardCountType)}
+                  className="h-10"
+                  textSize="text-sm"
+                />
               </div>
             </CardContent>
             <CardFooter className="border-t px-6 py-4">

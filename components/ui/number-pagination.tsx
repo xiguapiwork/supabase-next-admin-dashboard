@@ -15,8 +15,12 @@ export function NumberPagination({ totalItems, className }: NumberPaginationProp
       return [] // 5条或以下不显示数字
     } else if (totalItems <= 10) {
       return [1, 2] // 10条显示1-2
-    } else {
+    } else if (totalItems <= 20) {
+      return [1, 2, 3, 4] // 20条显示1-4
+    } else if (totalItems <= 30) {
       return [1, 2, 3, 4, 5, 6] // 30条显示1-6
+    } else {
+      return [1, 2, 3, 4, 5, 6, 7, 8] // 40条显示1-8
     }
   }
 
@@ -25,7 +29,7 @@ export function NumberPagination({ totalItems, className }: NumberPaginationProp
 
 
   return (
-    <div className={cn("flex items-center justify-center mt-6 h-6", className)}>
+    <div className={cn("flex items-center justify-center py-1 pt-7 h-6", className)}>
       {numbers.length > 0 && (
         <div className="inline-flex">
           {numbers.map((number, index) => {

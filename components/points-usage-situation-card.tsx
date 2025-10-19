@@ -19,15 +19,15 @@ const PointsUsageSituationCard: React.FC<PointsUsageSituationCardProps> = ({ onC
       onClick={onClick}
       className={`cursor-pointer ${isSelected ? 'border-primary' : ''}`}
     >
-      <CardHeader className="pb-2 px-4 pt-4">
+      <CardHeader className="pb-4 px-4 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-bold">
-            积分使用情况
+            积分消耗
           </CardTitle>
           <Coins className="h-4 w-4 text-gray-400" />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 pt-0 px-4 pb-4">
+      <CardContent className="space-y-2 pt-2 px-4 pb-4">
         {/* 状态标签和数字 */}
         <div className="flex items-center justify-between">
           <div className="text-xs font-medium text-gray-500 dark:text-gray-400">

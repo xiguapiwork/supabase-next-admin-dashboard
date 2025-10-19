@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode, useCallback } from 'react'
 
 export type TableBorderType = 'horizontal' | 'vertical' | 'both'
+export type CardCountType = 10 | 20 | 30 | 40
 
 interface AppSettings {
   pageSize: number
@@ -11,14 +12,18 @@ interface AppSettings {
   setPointsFormat: (format: 'integer' | 'decimal') => void
   tableBorder: TableBorderType
   setTableBorder: (border: TableBorderType) => void
+  cardCount: CardCountType
+  setCardCount: (count: CardCountType) => void
 }
 
 const DEFAULT_PAGE_SIZE = 10
 const DEFAULT_POINTS_FORMAT: 'integer' | 'decimal' = 'integer'
 const DEFAULT_TABLE_BORDER: TableBorderType = 'horizontal'
+const DEFAULT_CARD_COUNT: CardCountType = 10
 const STORAGE_KEY = 'app.pageSize'
 const POINTS_FORMAT_STORAGE_KEY = 'app.pointsFormat'
 const TABLE_BORDER_STORAGE_KEY = 'app.tableBorder'
+const CARD_COUNT_STORAGE_KEY = 'app.cardCount'
 
 const AppSettingsContext = createContext<AppSettings | undefined>(undefined)
 
@@ -26,6 +31,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const [pageSize, setPageSizeState] = useState<number>(DEFAULT_PAGE_SIZE)
   const [pointsFormat, setPointsFormatState] = useState<'integer' | 'decimal'>(DEFAULT_POINTS_FORMAT)
   const [tableBorder, setTableBorderState] = useState<TableBorderType>(DEFAULT_TABLE_BORDER)
+  const [cardCount, setCardCountState] = useState<CardCountType>(DEFAULT_CARD_COUNT)
 
   useEffect(() => {
     try {
@@ -49,6 +55,16 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       const tableBorderRaw = typeof window !== 'undefined' ? window.localStorage.getItem(TABLE_BORDER_STORAGE_KEY) : null
       if (tableBorderRaw && (tableBorderRaw === 'horizontal' || tableBorderRaw === 'vertical' || tableBorderRaw === 'both')) {
         setTableBorderState(tableBorderRaw)
+      }
+    } catch {}
+
+    try {
+      const cardCountRaw = typeof window !== 'undefined' ? window.localStorage.getItem(CARD_COUNT_STORAGE_KEY) : null
+      if (cardCountRaw) {
+        const parsed = parseInt(cardCountRaw, 10)
+        if (parsed === 10 || parsed === 20 || parsed === 30 || parsed === 40) {
+          setCardCountState(parsed as CardCountType)
+        }
       }
     } catch {}
   }, [])
@@ -81,7 +97,16 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [])
 
-  const value = useMemo<AppSettings>(() => ({ pageSize, setPageSize, pointsFormat, setPointsFormat, tableBorder, setTableBorder }), [pageSize, setPageSize, pointsFormat, setPointsFormat, tableBorder, setTableBorder])
+  const setCardCount = useCallback((count: CardCountType) => {
+    setCardCountState(count)
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(CARD_COUNT_STORAGE_KEY, String(count))
+      }
+    } catch {}
+  }, [])
+
+  const value = useMemo<AppSettings>(() => ({ pageSize, setPageSize, pointsFormat, setPointsFormat, tableBorder, setTableBorder, cardCount, setCardCount }), [pageSize, setPageSize, pointsFormat, setPointsFormat, tableBorder, setTableBorder, cardCount, setCardCount])
 
   return <AppSettingsContext.Provider value={value}>{children}</AppSettingsContext.Provider>
 }

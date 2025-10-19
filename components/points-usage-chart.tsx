@@ -12,8 +12,8 @@ export function PointsUsageChart() {
   const [viewType, setViewType] = useState('usage'); // 'usage' or 'rate'
 
   return (
-    <Card className="mb-4">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <ToggleGroupCustom
             options={['积分使用情况', '使用率']}
@@ -34,7 +34,7 @@ export function PointsUsageChart() {
           />
         </div>
       </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="pt-4 flex-1 flex flex-col">
         {viewType === 'usage' ? (
           <PointsUsageDataChart dataType={dataType} timeRange={timeRange} />
         ) : (

@@ -1,11 +1,11 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ToggleGroupCustom } from "@/components/ui/toggle-group-custom"
 import { NumberPagination } from "@/components/ui/number-pagination"
-import { formatPoints } from "@/lib/format-points"
 import { useState } from 'react'
+import { useAppSettings } from '@/contexts/AppSettingsContext'
 
 // 最近注册用户数据
 const recentRegistrationRecords = [
@@ -16,8 +16,7 @@ const recentRegistrationRecords = [
       email: 'newuser1@example.com',
       avatar: '/default-avatar/苹果.png'
     },
-    points: 100,
-    time: '07-20 15:30'
+    time: '5分钟前'
   },
   {
     id: 2,
@@ -26,8 +25,7 @@ const recentRegistrationRecords = [
       email: 'newuser2@example.com',
       avatar: '/default-avatar/橙子.png'
     },
-    points: 100,
-    time: '07-20 14:15'
+    time: '1小时前'
   },
   {
     id: 3,
@@ -36,8 +34,7 @@ const recentRegistrationRecords = [
       email: 'newuser3@example.com',
       avatar: '/default-avatar/草莓.png'
     },
-    points: 100,
-    time: '07-19 18:45'
+    time: '1天前'
   },
   {
     id: 4,
@@ -46,8 +43,7 @@ const recentRegistrationRecords = [
       email: 'newuser4@example.com',
       avatar: '/default-avatar/菠萝.png'
     },
-    points: 100,
-    time: '07-19 16:20'
+    time: '2天前'
   },
   {
     id: 5,
@@ -56,38 +52,91 @@ const recentRegistrationRecords = [
       email: 'newuser5@example.com',
       avatar: '/default-avatar/蓝莓.png'
     },
-    points: 100,
-    time: '07-19 11:30'
+    time: '3天前'
+  }
+]
+
+// 最近付费用户数据（调整顺序以便看到切换变化）
+const recentPaymentRecords = [
+  {
+    id: 1,
+    user: {
+      name: '付费用户五',
+      email: 'payuser5@example.com',
+      avatar: '/default-avatar/西瓜.png'
+    },
+    time: '2分钟前'
+  },
+  {
+    id: 2,
+    user: {
+      name: '付费用户一',
+      email: 'payuser1@example.com',
+      avatar: '/default-avatar/鸭梨.png'
+    },
+    time: '30分钟前'
+  },
+  {
+    id: 3,
+    user: {
+      name: '付费用户三',
+      email: 'payuser3@example.com',
+      avatar: '/default-avatar/菠萝.png'
+    },
+    time: '2小时前'
+  },
+  {
+    id: 4,
+    user: {
+      name: '付费用户二',
+      email: 'payuser2@example.com',
+      avatar: '/default-avatar/蓝莓.png'
+    },
+    time: '1天前'
+  },
+  {
+    id: 5,
+    user: {
+      name: '付费用户四',
+      email: 'payuser4@example.com',
+      avatar: '/default-avatar/草莓.png'
+    },
+    time: '3天前'
   }
 ]
 
 export function RecentRegistrationCard() {
-  const [selectedCount, setSelectedCount] = useState('10条')
-  const options = ['10条', '30条']
+  const { cardCount } = useAppSettings()
+  const [displayMode, setDisplayMode] = useState('最近注册')
+  const modeOptions = ['最近注册', '最近付费']
   
-  // 根据选择的条数过滤数据
+  // 根据显示模式获取对应的数据
+  const getCurrentRecords = () => {
+    return displayMode === '最近注册' ? recentRegistrationRecords : recentPaymentRecords
+  }
+  
+  // 根据全局设置的条数过滤数据
   const getFilteredRecords = () => {
-    const count = selectedCount === '10条' ? 10 : 30
-    return recentRegistrationRecords.slice(0, Math.min(count, recentRegistrationRecords.length))
+    const currentRecords = getCurrentRecords()
+    return currentRecords.slice(0, Math.min(cardCount, currentRecords.length))
   }
   
   const filteredRecords = getFilteredRecords()
-  const totalCount = parseInt(selectedCount.replace('条', ''))
+  const totalCount = cardCount
 
   return (
-    <Card style={{ width: '400px' }} className="flex-shrink-0">
-      <CardHeader className="pb-2 pt-4 !flex !flex-row !items-center !justify-between !space-y-0">
-        <CardTitle className="text-xs sm:text-sm md:text-base lg:text-lg flex items-center">最近注册用户</CardTitle>
+    <Card style={{ width: '400px' }} className="flex-shrink-0 h-full flex flex-col">
+      <CardHeader className="pb-2 pt-6 !flex !flex-row !items-center !justify-between !space-y-0">
         <div className="flex items-center">
           <ToggleGroupCustom
-            options={options}
-            value={selectedCount}
-            onValueChange={setSelectedCount}
-            className="text-xs sm:text-sm md:text-base"
+            options={modeOptions}
+            value={displayMode}
+            onValueChange={setDisplayMode}
+            className="text-xs sm:text-sm"
           />
         </div>
       </CardHeader>
-      <CardContent className="pt-1">
+      <CardContent className="pt-2 flex-1 flex flex-col">
         <div className="space-y-4">
           {filteredRecords.map((record) => (
             <div key={record.id} className="flex items-center justify-between px-[4%] py-[1%] border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 aspect-[5/1]">
@@ -109,16 +158,9 @@ export function RecentRegistrationCard() {
                 </div>
               </div>
               
-              {/* 右侧：积分和时间 */}
-              <div className="text-right">
-                <div className={`font-semibold text-[clamp(0.6rem,1.5vw,0.7rem)] ${
-                  record.points > 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {record.points > 0 ? '+' : ''}{formatPoints(record.points)}
-                </div>
-                <div className="text-sm text-muted-foreground text-[clamp(0.5rem,1.2vw,0.6rem)]">
-                  {record.time}
-                </div>
+              {/* 右侧：时间 */}
+              <div className="text-[clamp(0.6rem,1.5vw,0.75rem)] text-gray-500 dark:text-gray-400">
+                {record.time}
               </div>
             </div>
           ))}

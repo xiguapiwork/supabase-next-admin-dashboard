@@ -59,7 +59,7 @@ export function Header() {
   };
 
   return (
-    <nav className="w-full flex border-b border-b-foreground/10 h-14">
+    <nav className="w-full flex border-b border-b-foreground/10 h-16">
       <div className="w-full flex items-center p-3 px-5 text-sm relative">
         {/* 左侧：网站标题 */}
         <div className="flex items-center">

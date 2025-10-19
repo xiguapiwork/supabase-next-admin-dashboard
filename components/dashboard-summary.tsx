@@ -5,12 +5,14 @@ import UserSituationCard from './user-situation-card';
 import ExchangeCardsSituationCard from './exchange-cards-situation-card';
 import PointsUsageSituationCard from './points-usage-situation-card';
 import UsageCountSituationCard from './usage-count-situation-card';
+import FunctionStatusCard from './function-status-card';
 
 export type MetricType = 
   | 'totalUsers' 
   | 'totalExchangeCards'
   | 'pointsUsage' 
-  | 'usageCount';
+  | 'usageCount'
+  | 'functionStatus';
 
 interface DashboardSummaryProps {
   activeMetric: MetricType;
@@ -23,6 +25,7 @@ const DashboardSummary: React.FC<DashboardSummaryProps> = ({ activeMetric, setAc
     totalExchangeCards: { title: '总兑换卡数量', value: '1,256' },
     pointsUsage: { title: '积分使用情况', value: '18,567' },
     usageCount: { title: '使用次数', value: '8,567' },
+    functionStatus: { title: '功能情况', value: '3项' },
   };
 
   return (
@@ -68,6 +71,17 @@ const DashboardSummary: React.FC<DashboardSummaryProps> = ({ activeMetric, setAc
         if (metric === 'usageCount') {
           return (
             <UsageCountSituationCard
+              key={metric}
+              onClick={() => setActiveMetric(metric)}
+              isSelected={activeMetric === metric}
+            />
+          );
+        }
+        
+        // 为功能情况使用特殊的功能情况卡片
+        if (metric === 'functionStatus') {
+          return (
+            <FunctionStatusCard
               key={metric}
               onClick={() => setActiveMetric(metric)}
               isSelected={activeMetric === metric}

@@ -13,8 +13,8 @@ export function ExchangeCardsChart() {
   const [viewType, setViewType] = useState('situation'); // 积分卡情况/兑换率切换
 
   return (
-    <Card className="mb-4">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           {/* 积分卡情况/兑换率切换 */}
           <ToggleGroupCustom
@@ -44,7 +44,7 @@ export function ExchangeCardsChart() {
           />
         </div>
       </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="pt-4 flex-1 flex flex-col">
         {viewType === 'situation' ? (
           <ExchangeCardsSituationChart
             dataType={dataType}
