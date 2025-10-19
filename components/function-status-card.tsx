@@ -44,7 +44,7 @@ const FunctionStatusCard: React.FC<FunctionStatusCardProps> = ({ onClick, isSele
           />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 pt-2 px-4 pb-4">
+      <CardContent className="space-y-2 pt-0 px-4 pb-4">
         {functions.map((func, index) => (
           <div key={index} className="flex items-center gap-2">
             {/* 功能名称 - 占1/3宽度 */}

@@ -57,14 +57,12 @@ export function Dashboard() {
     <div className="flex flex-col gap-4 px-5 pt-1 pb-5 h-full">
       <DashboardSummary activeMetric={activeMetric} setActiveMetric={setActiveMetric} />
       {/* 外层容器 - 包裹表格和右侧卡片 */}
-      <div className="w-full flex-1 p-0 flex gap-4">
-        <div className="flex-1 min-w-0 flex flex-col">
+      <div className="w-full p-0 flex gap-4">
+        <div className="flex-1 min-w-0">
           {renderChart()}
         </div>
-        <div className="flex-shrink-0 h-fit">
-          <div className="h-full">
-            {renderRightContent()}
-          </div>
+        <div className="flex-shrink-0">
+          {renderRightContent()}
         </div>
       </div>
 

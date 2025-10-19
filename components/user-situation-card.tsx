@@ -17,7 +17,7 @@ const UserSituationCard: React.FC<UserSituationCardProps> = ({ onClick, isSelect
   return (
     <Card
       onClick={onClick}
-      className={`cursor-pointer ${isSelected ? 'border-primary' : ''}`}
+      className={`cursor-pointer ${isSelected ? 'border-primary' : ''} h-full flex flex-col`}
     >
       <CardHeader className="pb-4 px-4 pt-4">
         <div className="flex items-center justify-between">
@@ -27,11 +27,11 @@ const UserSituationCard: React.FC<UserSituationCardProps> = ({ onClick, isSelect
           <TrendingUp className="h-4 w-4 text-gray-400" />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 pt-2 px-4 pb-4">
+      <CardContent className="flex-1 flex flex-col justify-end space-y-2 pt-2 px-4 pb-4">
         {/* 状态标签和数字 */}
         <div className="flex items-center justify-between">
           <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            用户/总用户数
+            付费/总用户数
           </div>
           <div className="text-sm">
             {paidUsers.toLocaleString()} / <span className="font-bold">{totalUsers.toLocaleString()}</span>

@@ -1,7 +1,7 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { CreditCard } from 'lucide-react';
+import { ToggleGroupCustom } from './ui/toggle-group-custom';
 
 interface ExchangeCardsSituationCardProps {
   onClick?: () => void;
@@ -9,32 +9,44 @@ interface ExchangeCardsSituationCardProps {
 }
 
 const ExchangeCardsSituationCard: React.FC<ExchangeCardsSituationCardProps> = ({ onClick, isSelected }) => {
+  const [viewMode, setViewMode] = useState('卡片'); // '卡片' 或 '积分'
+  
   // 模拟数据
-  const redeemedCards = 1233; // 已兑换积分卡
-  const totalCards = 2847; // 总积分卡
-  const redemptionRate = Math.round((redeemedCards / totalCards) * 100); // 兑换率
+  const redeemedCards = 1233; // 已兑换积分卡数量
+  const totalCards = 2847; // 总积分卡数量
+  const redeemedPoints = 18567; // 已兑换积分总数
+  const totalPoints = 23456; // 总积分数
+  
+  // 根据模式计算数据
+  const currentRedeemed = viewMode === '卡片' ? redeemedCards : redeemedPoints;
+  const currentTotal = viewMode === '卡片' ? totalCards : totalPoints;
+  const redemptionRate = Math.round((currentRedeemed / currentTotal) * 100); // 兑换率
 
   return (
     <Card
       onClick={onClick}
-      className={`cursor-pointer ${isSelected ? 'border-primary' : ''}`}
+      className={`cursor-pointer ${isSelected ? 'border-primary' : ''} h-full flex flex-col`}
     >
       <CardHeader className="pb-4 px-4 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-bold">
             积分卡
           </CardTitle>
-          <CreditCard className="h-4 w-4 text-gray-400" />
+          <ToggleGroupCustom
+            options={['卡片', '积分']}
+            value={viewMode}
+            onValueChange={setViewMode}
+          />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 pt-2 px-4 pb-4">
+      <CardContent className="flex-1 flex flex-col justify-end space-y-2 pt-2 px-4 pb-4">
         {/* 状态标签和数字 */}
         <div className="flex items-center justify-between">
           <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            已兑换/总卡片数
+            已兑换/总{viewMode}数
           </div>
           <div className="text-sm">
-            {redeemedCards.toLocaleString()} / <span className="font-bold">{totalCards.toLocaleString()}</span>
+            {currentRedeemed.toLocaleString()} / <span className="font-bold">{currentTotal.toLocaleString()}</span>
           </div>
         </div>
 
