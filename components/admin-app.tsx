@@ -26,10 +26,13 @@ import { PointsLogs } from './points-logs'
 import { TaskLogs } from './task-logs'
 import { Setting } from './setting'
 import { AppSettingsProvider } from '@/contexts/AppSettingsContext'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 interface AdminAppProps {
   initialPage?: string
 }
+
+const queryClient = new QueryClient()
 
 export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
   const [currentPage, setCurrentPage] = useState(initialPage)
@@ -79,6 +82,21 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
     pointsChange: true,
     finalPoints: true,
     taskId: false
+  })
+
+  // Task Logs导出功能状态
+  const [isTaskLogsExportDialogOpen, setIsTaskLogsExportDialogOpen] = useState(false)
+  const [taskLogsExportStatusFilter, setTaskLogsExportStatusFilter] = useState<'all' | '成功' | '失败' | '处理中'>('all')
+  const [taskLogsExportColumns, setTaskLogsExportColumns] = useState({
+    timestamp: true,
+    taskId: true,
+    username: true,
+    userEmail: true,
+    action: true,
+    status: true,
+    details: true,
+    ipAddress: false,
+    userAgent: false
   })
 
   const renderCurrentPage = () => {
@@ -246,7 +264,7 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
             </DialogContent>
           </Dialog>
         )
-      case '/logs':
+      case '/points-logs':
         return (
           <Dialog open={isLogsExportDialogOpen} onOpenChange={setIsLogsExportDialogOpen}>
             <DialogTrigger asChild>
@@ -719,20 +737,155 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
             </Dialog>
           </div>
         )
+      case '/task-logs':
+        return (
+          <Dialog open={isTaskLogsExportDialogOpen} onOpenChange={setIsTaskLogsExportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 border-0 shadow-none">
+                <Download className="h-4 w-4 mr-2" />
+                导出
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>导出任务日志</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">状态筛选</Label>
+                  <Select value={taskLogsExportStatusFilter} onValueChange={(value: 'all' | '成功' | '失败' | '处理中') => setTaskLogsExportStatusFilter(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择状态" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">所有状态</SelectItem>
+                      <SelectItem value="成功">成功</SelectItem>
+                      <SelectItem value="失败">失败</SelectItem>
+                      <SelectItem value="处理中">处理中</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">选择导出字段</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="task-timestamp" 
+                        checked={taskLogsExportColumns.timestamp}
+                        onCheckedChange={(checked) => 
+                          setTaskLogsExportColumns(prev => ({ ...prev, timestamp: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="task-timestamp" className="text-sm">时间</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="task-taskId" 
+                        checked={taskLogsExportColumns.taskId}
+                        onCheckedChange={(checked) => 
+                          setTaskLogsExportColumns(prev => ({ ...prev, taskId: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="task-taskId" className="text-sm">任务ID</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="task-username" 
+                        checked={taskLogsExportColumns.username}
+                        onCheckedChange={(checked) => 
+                          setTaskLogsExportColumns(prev => ({ ...prev, username: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="task-username" className="text-sm">用户名</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="task-userEmail" 
+                        checked={taskLogsExportColumns.userEmail}
+                        onCheckedChange={(checked) => 
+                          setTaskLogsExportColumns(prev => ({ ...prev, userEmail: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="task-userEmail" className="text-sm">邮箱</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="task-action" 
+                        checked={taskLogsExportColumns.action}
+                        onCheckedChange={(checked) => 
+                          setTaskLogsExportColumns(prev => ({ ...prev, action: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="task-action" className="text-sm">操作</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="task-status" 
+                        checked={taskLogsExportColumns.status}
+                        onCheckedChange={(checked) => 
+                          setTaskLogsExportColumns(prev => ({ ...prev, status: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="task-status" className="text-sm">状态</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="task-details" 
+                        checked={taskLogsExportColumns.details}
+                        onCheckedChange={(checked) => 
+                          setTaskLogsExportColumns(prev => ({ ...prev, details: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="task-details" className="text-sm">详情</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="task-ipAddress" 
+                        checked={taskLogsExportColumns.ipAddress}
+                        onCheckedChange={(checked) => 
+                          setTaskLogsExportColumns(prev => ({ ...prev, ipAddress: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="task-ipAddress" className="text-sm">IP地址</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="task-userAgent" 
+                        checked={taskLogsExportColumns.userAgent}
+                        onCheckedChange={(checked) => 
+                          setTaskLogsExportColumns(prev => ({ ...prev, userAgent: checked as boolean }))
+                        }
+                      />
+                      <Label htmlFor="task-userAgent" className="text-sm">用户代理</Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsTaskLogsExportDialogOpen(false)}>
+                  取消
+                </Button>
+                <Button type="submit">导出</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )
       default:
         return null
     }
   }
 
   return (
-    <AppSettingsProvider>
-      <AdminLayout 
-        currentPath={currentPage} 
-        onPageChange={setCurrentPage}
-        headerActions={renderHeaderActions()}
-      >
-        {renderCurrentPage()}
-      </AdminLayout>
-    </AppSettingsProvider>
+    <QueryClientProvider client={queryClient}>
+      <AppSettingsProvider>
+        <AdminLayout
+          currentPath={currentPage}
+          onPageChange={setCurrentPage}
+          headerActions={renderHeaderActions()}
+        >
+          {renderCurrentPage()}
+        </AdminLayout>
+      </AppSettingsProvider>
+    </QueryClientProvider>
   )
 }
