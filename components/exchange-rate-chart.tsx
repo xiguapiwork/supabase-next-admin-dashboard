@@ -87,7 +87,7 @@ const CustomTooltip = ({ active, payload, label, dataType, displayMode }: Custom
     }
 
     return (
-      <div className="bg-white p-4 border border-gray-200 rounded shadow-lg w-[200px]">
+      <div className="bg-popover text-popover-foreground p-4 border rounded shadow-lg w-[200px]">
         <p className="font-bold">{label ? new Date(label).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' }) : ''}</p>
         <div className="flex justify-between mt-2">
           <span className="font-bold">{rateLabel}</span>

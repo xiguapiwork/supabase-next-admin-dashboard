@@ -35,12 +35,12 @@ const mockDataNew = Array.from({ length: 30 }, (_, i) => {
 
 const chartConfig = {
   totalUsage: {
-    label: '功能使用次数',
-    color: 'black',
+    label: '总使用次数',
+    color: 'hsl(var(--foreground))',
   },
   successUsage: {
-    label: '成功次数',
-    color: 'gray',
+    label: '成功使用次数',
+    color: 'hsl(var(--muted-foreground))',
   },
 };
 
@@ -76,7 +76,7 @@ const CustomTooltip = ({ active, payload, label, dataType }: CustomTooltipProps)
     };
 
     return (
-      <div className="bg-white p-4 border border-gray-200 rounded shadow-lg w-[200px]">
+      <div className="bg-popover text-popover-foreground p-4 border rounded shadow-lg w-[200px]">
         <p className="font-bold">{label ? new Date(label).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' }) : ''}</p>
         <div className="flex justify-between mt-2">
           <span className="font-bold">{titles.totalUsage}</span>

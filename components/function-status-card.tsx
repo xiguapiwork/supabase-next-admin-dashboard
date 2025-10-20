@@ -30,7 +30,8 @@ const FunctionStatusCard: React.FC<FunctionStatusCardProps> = ({ onClick, isSele
   return (
     <Card
       onClick={onClick}
-      className={`cursor-pointer ${isSelected ? 'border-primary' : ''}`}
+      className={`cursor-pointer ${isSelected ? 'border-2 border-black dark:border-white' : 'border border-gray-200 dark:border-gray-600'} flex flex-col`}
+      style={{ aspectRatio: '40/23', minWidth: '260px' }}
     >
       <CardHeader className="pb-4 px-4 pt-4">
         <div className="flex items-center justify-between">
@@ -44,7 +45,7 @@ const FunctionStatusCard: React.FC<FunctionStatusCardProps> = ({ onClick, isSele
           />
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 pt-0 px-4 pb-4">
+      <CardContent className="flex-1 flex flex-col justify-end space-y-2 pt-0 px-4 pb-4">
         {functions.map((func, index) => (
           <div key={index} className="flex items-center gap-2">
             {/* 功能名称 - 占1/3宽度 */}

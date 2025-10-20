@@ -75,7 +75,7 @@ const CustomTooltip = ({ active, payload, label, dataType }: CustomTooltipProps)
     const title = dataType === 'new' ? '新增使用次数' : '累计使用次数';
 
     return (
-      <div className="bg-white p-4 border border-gray-200 rounded shadow-lg w-[200px]">
+      <div className="bg-popover text-popover-foreground p-4 border rounded shadow-lg w-[200px]">
         <p className="font-bold">{label ? new Date(label).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' }) : ''}</p>
         <p className="text-sm text-gray-600 mb-2">{title}</p>
         <div className="flex justify-between mt-2">

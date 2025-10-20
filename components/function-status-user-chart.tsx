@@ -69,39 +69,39 @@ const CustomTooltip = ({ active, payload, label, dataType }: CustomTooltipProps)
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-        <p className="text-sm font-medium text-gray-900 mb-2">{label}</p>
+      <div className="bg-popover text-popover-foreground p-3 border rounded-lg shadow-lg">
+        <p className="text-sm font-medium mb-2">{label}</p>
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-black"></div>
-              <span className="text-sm text-gray-600">功能A</span>
+              <div className="w-3 h-3 rounded-full bg-foreground"></div>
+              <span className="text-sm text-muted-foreground">功能A</span>
             </div>
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-medium">
               {data.functionA}人
             </span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gray-600"></div>
-              <span className="text-sm text-gray-600">功能B</span>
+              <div className="w-3 h-3 rounded-full bg-muted-foreground"></div>
+              <span className="text-sm text-muted-foreground">功能B</span>
             </div>
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-medium">
               {data.functionB}人
             </span>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-              <span className="text-sm text-gray-600">功能C</span>
+              <div className="w-3 h-3 rounded-full bg-muted"></div>
+              <span className="text-sm text-muted-foreground">功能C</span>
             </div>
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-medium">
               {data.functionC}人
             </span>
           </div>
         </div>
-        <div className="mt-2 pt-2 border-t border-gray-100">
-          <p className="text-xs text-gray-500">
+        <div className="mt-2 pt-2 border-t border-border">
+          <p className="text-xs text-muted-foreground">
             {dataType === 'cumulative' ? '累计人数' : '新增人数'}
           </p>
         </div>

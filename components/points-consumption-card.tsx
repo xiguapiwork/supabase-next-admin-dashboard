@@ -358,7 +358,7 @@ export function PointsConsumptionCard() {
       <CardContent className="pt-2 flex-1 flex flex-col">
         <div className="space-y-4">
           {filteredRecords.map((record) => (
-            <div key={record.id} className="flex items-center justify-between px-[4%] py-[2%] border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 aspect-[5/1]">
+            <div key={record.id} className="flex items-center justify-between px-[4%] py-[2%] border border-gray-200 dark:border-gray-700 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors cursor-pointer aspect-[5/1]">
               {/* 左侧：用户头像、用户名、邮箱 */}
               <div className="flex items-center">
                 <Avatar className="aspect-square flex-shrink-0">

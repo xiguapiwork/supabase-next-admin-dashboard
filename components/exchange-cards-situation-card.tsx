@@ -25,7 +25,8 @@ const ExchangeCardsSituationCard: React.FC<ExchangeCardsSituationCardProps> = ({
   return (
     <Card
       onClick={onClick}
-      className={`cursor-pointer ${isSelected ? 'border-primary' : ''} h-full flex flex-col`}
+      className={`cursor-pointer ${isSelected ? 'border-2 border-black dark:border-white' : 'border border-gray-200 dark:border-gray-600'} flex flex-col`}
+      style={{ aspectRatio: '40/23', minWidth: '260px' }}
     >
       <CardHeader className="pb-4 px-4 pt-4">
         <div className="flex items-center justify-between">

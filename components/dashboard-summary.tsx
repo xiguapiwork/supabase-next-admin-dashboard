@@ -29,7 +29,7 @@ const DashboardSummary: React.FC<DashboardSummaryProps> = ({ activeMetric, setAc
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
       {Object.keys(summaryData).map((key) => {
         const metric = key as MetricType;
         const { title, value } = summaryData[metric];

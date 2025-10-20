@@ -13,7 +13,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, onClick, isSele
   return (
     <Card
       onClick={onClick}
-      className={`cursor-pointer ${isSelected ? 'border-primary' : ''}`}
+      className={`cursor-pointer ${isSelected ? 'border-2 border-black dark:border-white' : 'border border-gray-200 dark:border-gray-600'}`}
     >
       <CardHeader>
         <CardTitle className="text-sm font-medium">{title}</CardTitle>

@@ -42,12 +42,12 @@ const mockDataNew = Array.from({ length: 30 }, (_, i) => {
 
 const chartConfig = {
   totalCards: {
-    label: '总积分卡',
-    color: 'black',
+    label: '总卡片数',
+    color: 'hsl(var(--foreground))',
   },
   exchangedCards: {
-    label: '已兑换',
-    color: 'gray',
+    label: '已兑换卡片数',
+    color: 'hsl(var(--muted-foreground))',
   },
 };
 
@@ -89,7 +89,7 @@ const CustomTooltip = ({ active, payload, label, dataType, displayMode }: Custom
     }
 
     return (
-      <div className="bg-white p-4 border border-gray-200 rounded shadow-lg w-[200px]">
+      <div className="bg-popover text-popover-foreground p-4 border rounded shadow-lg w-[200px]">
         <p className="font-bold">{label ? new Date(label).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' }) : ''}</p>
         <div className="flex justify-between mt-2">
           <span className="font-bold">{totalLabel}</span>

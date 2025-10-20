@@ -85,22 +85,6 @@ export function Header() {
                 )}
               </Button>
             </Link>
-            <Link href="/history">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={`text-sm font-semibold p-0 h-auto hover:bg-transparent relative ${
-                  isActive('/history') 
-                    ? 'text-blue-600 dark:text-blue-400' 
-                    : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
-                }`}
-              >
-                历史记录
-                {isActive('/history') && (
-                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
-                )}
-              </Button>
-            </Link>
             <Link href="/protected/settings">
               <Button 
                 variant="ghost" 

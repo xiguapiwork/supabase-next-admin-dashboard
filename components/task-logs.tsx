@@ -412,7 +412,7 @@ export function TaskLogs() {
                   </div>
                 </TableHead>
                 <TableHead
-                  className={cn("w-[10%] cursor-pointer hover:bg-gray-50 transition-colors pl-3", getTableBorderClasses(tableBorder).headerCell)}
+                  className={cn("w-[10%] cursor-pointer hover:bg-muted/50 transition-colors pl-3", getTableBorderClasses(tableBorder).headerCell)}
                   onClick={() => handleSort('taskTime')}
                 >
                   <div className="flex items-center gap-2">
@@ -430,7 +430,7 @@ export function TaskLogs() {
             </TableHeader>
             <TableBody>
                 {paginatedLogs.map((log) => (
-                  <TableRow key={log.id} className={cn("hover:bg-gray-50/50", getTableBorderClasses(tableBorder).row)}>
+                  <TableRow key={log.id} className={cn("hover:bg-muted/30", getTableBorderClasses(tableBorder).row)}>
                     <TableCell className={cn("w-8 p-0", getTableBorderClasses(tableBorder).cell)}>
                       <div className="flex items-center justify-center h-full">
                         <Checkbox

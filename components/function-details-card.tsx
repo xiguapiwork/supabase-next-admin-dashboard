@@ -90,7 +90,7 @@ export function FunctionDetailsCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         {getCurrentData().map((item, index) => (
-          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div key={index} className="flex items-center justify-between p-3 bg-muted/50 hover:bg-muted/70 transition-colors cursor-pointer rounded-lg">
             <div className="flex flex-col">
               <div className="font-medium text-sm">{item.name}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">

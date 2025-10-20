@@ -15,10 +15,12 @@ import { toast } from 'sonner'
 import { ApiKeyCard } from '@/components/api-key-card'
 import { AddApiKeyCard } from '@/components/add-api-key-card'
 import { TemplateCard } from '@/components/template-card'
+import { CommonVariableCard } from '@/components/common-variable-card'
+import { AddCommonVariableCard } from '@/components/add-common-variable-card'
 import { AddTemplateCard } from '@/components/add-template-card'
 import { MasonryLayout } from '@/components/masonry-layout'
 
-type SettingTabType = 'apikey' | 'display' | 'deduction' | 'cleanup'
+type SettingTabType = 'apikey' | 'variables' | 'display' | 'deduction' | 'cleanup'
 
 interface ApiKeyData {
   id: string
@@ -39,6 +41,13 @@ interface TemplateData {
   title: string
   description: string
   features: FeatureItem[]
+  isNew?: boolean
+}
+
+interface CommonVariableData {
+  id: string
+  title: string
+  value: string
   isNew?: boolean
 }
 
@@ -86,6 +95,15 @@ export function Setting() {
     }
   ])
 
+  // 常用变量管理状态
+  const [commonVariables, setCommonVariables] = useState<CommonVariableData[]>([
+    {
+      id: 'var-1',
+      title: '示例变量',
+      value: '示例值'
+    }
+  ])
+
   // API Key 管理函数
   const handleAddApiKey = () => {
     const newApiKey: ApiKeyData = {
@@ -130,6 +148,27 @@ export function Setting() {
 
   const handleDeleteTemplate = (id: string) => {
     setTemplates(prev => prev.filter(item => item.id !== id))
+  }
+
+  // 常用变量管理函数
+  const handleAddCommonVariable = () => {
+    const newVariable: CommonVariableData = {
+      id: `variable-${Date.now()}`,
+      title: '',
+      value: '',
+      isNew: true
+    }
+    setCommonVariables(prev => [...prev, newVariable])
+  }
+
+  const handleUpdateCommonVariable = (id: string, value: string, title?: string) => {
+    setCommonVariables(prev => prev.map(item => 
+      item.id === id ? { ...item, value, title: title || item.title, isNew: false } : item
+    ))
+  }
+
+  const handleDeleteCommonVariable = (id: string) => {
+    setCommonVariables(prev => prev.filter(item => item.id !== id))
   }
 
   // 输入归一化：支持中文输入法下的全角数字与小数点转换
@@ -332,6 +371,7 @@ export function Setting() {
   // 标签页配置
   const tabs = [
     { id: 'apikey' as SettingTabType, label: 'API Key 设置' },
+    { id: 'variables' as SettingTabType, label: '常用变量' },
     { id: 'display' as SettingTabType, label: '显示设置' },
     { id: 'deduction' as SettingTabType, label: '功能设置' },
     { id: 'cleanup' as SettingTabType, label: '清除数据' }
@@ -370,6 +410,41 @@ export function Setting() {
               <div className="col-span-full text-center py-8">
                 <p className="text-muted-foreground text-sm">
                   还没有添加任何 API Key，点击上方卡片开始添加
+                </p>
+              </div>
+            )}
+          </div>
+        )
+
+      case 'variables':
+        return (
+          <div className="space-y-6">
+            {/* 常用变量卡片列表 */}
+            <div className="w-full px-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 w-full">
+                {/* 现有常用变量卡片 */}
+                {commonVariables.map((variable) => (
+                  <CommonVariableCard
+                    key={variable.id}
+                    id={variable.id}
+                    title={variable.title}
+                    value={variable.value}
+                    onUpdate={handleUpdateCommonVariable}
+                    onDelete={handleDeleteCommonVariable}
+                    isNew={variable.isNew}
+                  />
+                ))}
+                
+                {/* 添加常用变量卡片 */}
+                <AddCommonVariableCard onClick={handleAddCommonVariable} />
+              </div>
+            </div>
+
+            {/* 空状态 */}
+            {commonVariables.length === 0 && (
+              <div className="col-span-full text-center py-8">
+                <p className="text-muted-foreground text-sm">
+                  还没有添加任何常用变量，点击上方卡片开始添加
                 </p>
               </div>
             )}

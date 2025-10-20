@@ -31,7 +31,7 @@ export function ToggleGroupCustom({
             key={option}
             onClick={() => onValueChange(option)}
             className={cn(
-              `px-2 py-1 ${textSize} font-medium transition-all duration-200 rounded-md whitespace-nownowrap`,
+              `px-2 py-1 ${textSize} font-medium transition-all duration-200 rounded-md whitespace-nowrap`,
               "focus:outline-none",
               {
                 // 选中状态 - 白色背景，深色文字

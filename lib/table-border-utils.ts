@@ -4,7 +4,7 @@ import type { TableBorderType } from '@/contexts/AppSettingsContext'
  * 根据边框类型生成表格边框样式类名
  */
 export function getTableBorderClasses(borderType: TableBorderType) {
-  const baseClasses = 'border-gray-300 dark:border-gray-600'
+  const baseClasses = 'border-gray-300 dark:border-gray-400'
   
   switch (borderType) {
     case 'horizontal':
