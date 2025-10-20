@@ -98,7 +98,7 @@ export function AvatarSettings({ user, profile, avatarUrl }: AvatarSettingsProps
 
       // 更新用户资料中的头像路径
       const { error: updateError } = await supabase
-        .from('profiles')
+        .from('user-management')
         .update({ avatar: filePath })
         .eq('id', user.id);
 

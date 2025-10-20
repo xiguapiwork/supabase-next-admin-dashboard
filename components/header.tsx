@@ -42,7 +42,7 @@ export function Header() {
       // 获取用户资料信息
       if (currentUser) {
         const { data: profileData } = await supabase
-          .from('profiles')
+          .from('user-management')
           .select('username, points, avatar, role')
           .eq('id', currentUser.sub)
           .single();

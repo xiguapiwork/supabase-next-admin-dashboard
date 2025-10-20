@@ -55,7 +55,7 @@ export function UsernameSettings({ user, profile }: UsernameSettingsProps) {
       
       // 检查用户名是否已存在
       const { data: existingUser, error: checkError } = await supabase
-        .from('profiles')
+        .from('user-management')
         .select('id')
         .eq('username', username)
         .neq('id', user.id)
@@ -72,7 +72,7 @@ export function UsernameSettings({ user, profile }: UsernameSettingsProps) {
 
       // 更新用户名
       const { error } = await supabase
-        .from('profiles')
+        .from('user-management')
         .update({ username: username.trim() })
         .eq('id', user.id);
 

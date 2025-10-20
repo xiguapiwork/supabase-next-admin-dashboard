@@ -17,7 +17,7 @@ export default async function SettingsPage() {
 
   // 获取用户资料信息
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('user-management')
     .select('username, points, avatar, role')
     .eq('id', user.id)
     .single();

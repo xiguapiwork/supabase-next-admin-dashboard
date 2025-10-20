@@ -13,7 +13,7 @@ export default async function AdminPage() {
 
   // 获取用户资料信息（包括角色）
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('user-management')
     .select('role')
     .eq('id', user.id)
     .single();
