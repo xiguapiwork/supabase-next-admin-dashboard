@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,9 @@ interface ApiKeyCardProps {
   provider: string
   onUpdate: (id: string, apiKey: string, provider: string, title?: string) => void
   onDelete: (id: string) => void
+  onToggle?: (name: string, enabled: boolean) => void
   isNew?: boolean
+  enabled?: boolean
 }
 
 export function ApiKeyCard({ 
@@ -27,14 +29,21 @@ export function ApiKeyCard({
   provider, 
   onUpdate, 
   onDelete, 
-  isNew = false 
+  onToggle,
+  isNew = false,
+  enabled = true
 }: ApiKeyCardProps) {
   const [isEditing, setIsEditing] = useState(isNew)
   const [showKey, setShowKey] = useState(false)
   const [keyDraft, setKeyDraft] = useState(apiKey)
   const [titleDraft, setTitleDraft] = useState(title)
-  const [isEnabled, setIsEnabled] = useState(true)
+  const [isEnabled, setIsEnabled] = useState(enabled)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  // 同步外部 enabled 状态
+  useEffect(() => {
+    setIsEnabled(enabled)
+  }, [enabled])
 
   const isChanged = keyDraft !== apiKey || titleDraft !== title
 
@@ -67,6 +76,14 @@ export function ApiKeyCard({
     onDelete(id)
     setShowDeleteDialog(false)
     toast.success('API Key 删除成功')
+  }
+
+  const handleToggleEnabled = (checked: boolean) => {
+    if (onToggle && title) {
+      onToggle(title, checked)
+    } else {
+      setIsEnabled(checked)
+    }
   }
 
   const maskApiKey = (key: string): string => {
@@ -126,7 +143,7 @@ export function ApiKeyCard({
             <div className="flex items-center gap-2 ml-2">
               <Switch
                 checked={isEnabled}
-                onCheckedChange={setIsEnabled}
+                onCheckedChange={handleToggleEnabled}
                 className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 scale-125"
               />
             </div>
@@ -197,15 +214,17 @@ export function ApiKeyCard({
               disabled={!isChanged && !isNew}
               className="h-8 px-3 text-sm"
             >
-              保存
+              {isNew ? '添加' : '保存'}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              className="h-8 px-3 text-sm"
-            >
-              删除
-            </Button>
+            {!isNew && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                className="h-8 px-3 text-sm"
+              >
+                删除
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

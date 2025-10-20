@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,9 @@ interface CommonVariableCardProps {
   value: string
   onUpdate: (id: string, value: string, title?: string) => void
   onDelete: (id: string) => void
+  onToggle?: (name: string, enabled: boolean) => void
   isNew?: boolean
+  enabled?: boolean
 }
 
 export function CommonVariableCard({ 
@@ -26,13 +28,28 @@ export function CommonVariableCard({
   value, 
   onUpdate, 
   onDelete, 
-  isNew = false 
+  onToggle,
+  isNew = false,
+  enabled = true
 }: CommonVariableCardProps) {
   const [isEditing, setIsEditing] = useState(isNew)
   const [valueDraft, setValueDraft] = useState(value)
   const [titleDraft, setTitleDraft] = useState(title)
-  const [isEnabled, setIsEnabled] = useState(true)
+  const [isEnabled, setIsEnabled] = useState(enabled)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  // 同步外部enabled状态
+  useEffect(() => {
+    setIsEnabled(enabled)
+  }, [enabled])
+
+  const handleToggleEnabled = () => {
+    const newEnabled = !isEnabled
+    setIsEnabled(newEnabled)
+    if (onToggle) {
+      onToggle(title, newEnabled)
+    }
+  }
 
   const isChanged = valueDraft !== value || titleDraft !== title
 
@@ -103,7 +120,7 @@ export function CommonVariableCard({
             <div className="flex items-center gap-2 ml-2">
               <Switch
                 checked={isEnabled}
-                onCheckedChange={setIsEnabled}
+                onCheckedChange={handleToggleEnabled}
                 className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 scale-125"
               />
             </div>
@@ -153,15 +170,17 @@ export function CommonVariableCard({
               disabled={!isChanged && !isNew}
               className="h-8 px-3 text-sm"
             >
-              保存
+              {isNew ? '添加' : '保存'}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              className="h-8 px-3 text-sm"
-            >
-              删除
-            </Button>
+            {!isNew && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                className="h-8 px-3 text-sm"
+              >
+                删除
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

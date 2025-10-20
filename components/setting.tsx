@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,7 @@ import { CommonVariableCard } from '@/components/common-variable-card'
 import { AddCommonVariableCard } from '@/components/add-common-variable-card'
 import { AddTemplateCard } from '@/components/add-template-card'
 import { MasonryLayout } from '@/components/masonry-layout'
+import { createClient } from '@/lib/supabase/client'
 
 type SettingTabType = 'apikey' | 'variables' | 'display' | 'deduction' | 'cleanup'
 
@@ -28,6 +29,8 @@ interface ApiKeyData {
   key: string
   provider: string
   isNew?: boolean
+  enabled?: boolean
+  originalTitle?: string // 添加原始标题字段，用于更新时的标识
 }
 
 interface FeatureItem {
@@ -48,7 +51,9 @@ interface CommonVariableData {
   id: string
   title: string
   value: string
+  enabled?: boolean
   isNew?: boolean
+  originalTitle?: string // 添加原始标题字段，用于更新时的标识
 }
 
 export function Setting() {
@@ -56,14 +61,11 @@ export function Setting() {
   const [activeTab, setActiveTab] = useState<SettingTabType>('apikey')
 
   // API Key 管理状态
-  const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([
-    {
-      id: '1',
-      title: 'Openrouter',
-      key: 'sk-1234567890abcdef1234567890abcdef',
-      provider: 'openrouter'
-    }
-  ])
+  const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([])
+  const [isLoadingApiKeys, setIsLoadingApiKeys] = useState(true)
+
+  // Supabase 客户端
+  const supabase = createClient()
 
   // 模版管理状态
   const [templates, setTemplates] = useState<TemplateData[]>([
@@ -103,6 +105,76 @@ export function Setting() {
       value: '示例值'
     }
   ])
+  const [isLoadingCommonVariables, setIsLoadingCommonVariables] = useState(false)
+
+  // 从数据库加载 API Keys
+  const loadApiKeys = useCallback(async () => {
+    try {
+      setIsLoadingApiKeys(true)
+      const { data, error } = await supabase.rpc('get_api_keys_list')
+      
+      if (error) {
+        console.error('加载 API Keys 失败:', error)
+        toast.error('加载 API Keys 失败')
+        return
+      }
+
+      // 转换数据库数据为组件需要的格式
+      const formattedApiKeys: ApiKeyData[] = (data || []).map((item: Record<string, unknown>) => ({
+        id: String(item.id),
+        title: String(item.名称),
+        key: String(item.key_masked), // 使用掩码显示的 key
+        provider: 'openrouter', // 默认 provider，可以后续扩展
+        enabled: Boolean(item.是否启用),
+        isNew: false,
+        originalTitle: String(item.名称) // 保存原始标题用于更新
+      }))
+
+      setApiKeys(formattedApiKeys)
+    } catch (error) {
+      console.error('加载 API Keys 出错:', error)
+      toast.error('加载 API Keys 出错')
+    } finally {
+      setIsLoadingApiKeys(false)
+    }
+  }, [supabase])
+
+  // 从数据库加载常用变量
+  const loadCommonVariables = useCallback(async () => {
+    try {
+      setIsLoadingCommonVariables(true)
+      const { data, error } = await supabase.rpc('get_variables_list')
+      
+      if (error) {
+        console.error('加载常用变量失败:', error)
+        toast.error('加载常用变量失败')
+        return
+      }
+
+      // 转换数据库数据为组件需要的格式
+      const formattedVariables: CommonVariableData[] = (data || []).map((item: Record<string, unknown>) => ({
+        id: String(item.id),
+        title: String(item.变量名),
+        value: String(item.变量值),
+        enabled: Boolean(item.是否启用),
+        isNew: false,
+        originalTitle: String(item.变量名) // 保存原始标题用于更新
+      }))
+
+      setCommonVariables(formattedVariables)
+    } catch (error) {
+      console.error('加载常用变量出错:', error)
+      toast.error('加载常用变量出错')
+    } finally {
+      setIsLoadingCommonVariables(false)
+    }
+  }, [supabase])
+
+  // 组件挂载时加载数据
+  useEffect(() => {
+    loadApiKeys()
+    loadCommonVariables()
+  }, [loadApiKeys, loadCommonVariables])
 
   // API Key 管理函数
   const handleAddApiKey = () => {
@@ -111,19 +183,138 @@ export function Setting() {
       title: '',
       key: '',
       provider: 'openrouter',
-      isNew: true
+      isNew: true,
+      enabled: true
     }
     setApiKeys(prev => [...prev, newApiKey])
   }
 
-  const handleUpdateApiKey = (id: string, key: string, provider: string, title?: string) => {
-    setApiKeys(prev => prev.map(item => 
-      item.id === id ? { ...item, key, provider, title: title || item.title, isNew: false } : item
-    ))
+  const handleUpdateApiKey = async (id: string, key: string, provider: string, title?: string) => {
+    try {
+      // 如果是新的 API Key，需要保存到数据库
+      const apiKey = apiKeys.find(item => item.id === id)
+      if (apiKey?.isNew) {
+        if (!title?.trim()) {
+          toast.error('API Key 名称不能为空')
+          return
+        }
+        if (!key?.trim()) {
+          toast.error('API Key 不能为空')
+          return
+        }
+
+        // 调用数据库函数保存新的 API Key
+        const { error } = await supabase.rpc('upsert_api_key', {
+          p_name: title,
+          p_key: key,
+          p_enabled: true
+        })
+
+        if (error) {
+          console.error('保存 API Key 失败:', error)
+          toast.error('保存 API Key 失败: ' + error.message)
+          return
+        }
+
+        toast.success('API Key 保存成功')
+        // 重新加载数据
+        await loadApiKeys()
+      } else {
+        // 更新现有的 API Key
+        const currentApiKey = apiKeys.find(item => item.id === id)
+        if (!currentApiKey) {
+          toast.error('找不到要更新的 API Key')
+          return
+        }
+
+        const newTitle = title || currentApiKey.title
+        const newKey = key
+
+        if (!newTitle?.trim()) {
+          toast.error('API Key 名称不能为空')
+          return
+        }
+        if (!newKey?.trim()) {
+          toast.error('API Key 不能为空')
+          return
+        }
+
+        // 调用数据库函数更新现有的 API Key
+        const { error } = await supabase.rpc('update_api_key_by_name', {
+          p_original_name: currentApiKey.originalTitle || currentApiKey.title,
+          p_new_name: newTitle,
+          p_key: newKey,
+          p_enabled: currentApiKey.enabled ?? true
+        })
+
+        if (error) {
+          console.error('更新 API Key 失败:', error)
+          toast.error('更新 API Key 失败: ' + error.message)
+          return
+        }
+
+        toast.success('API Key 更新成功')
+        // 重新加载数据
+        await loadApiKeys()
+      }
+    } catch (error) {
+      console.error('更新 API Key 出错:', error)
+      toast.error('更新 API Key 出错')
+    }
   }
 
-  const handleDeleteApiKey = (id: string) => {
-    setApiKeys(prev => prev.filter(item => item.id !== id))
+  const handleDeleteApiKey = async (id: string) => {
+    try {
+      const apiKey = apiKeys.find(item => item.id === id)
+      
+      if (apiKey?.isNew) {
+        // 如果是新建的还未保存的 API Key，直接从状态中移除
+        setApiKeys(prev => prev.filter(item => item.id !== id))
+        return
+      }
+
+      if (apiKey?.title) {
+        // 调用数据库函数删除 API Key
+        const { error } = await supabase.rpc('delete_api_key', {
+          p_name: apiKey.title
+        })
+
+        if (error) {
+          console.error('删除 API Key 失败:', error)
+          toast.error('删除 API Key 失败: ' + error.message)
+          return
+        }
+
+        toast.success('API Key 删除成功')
+        // 重新加载数据
+        await loadApiKeys()
+      }
+    } catch (error) {
+      console.error('删除 API Key 出错:', error)
+      toast.error('删除 API Key 出错')
+    }
+  }
+
+  const handleToggleApiKey = async (name: string, enabled: boolean) => {
+    try {
+      const { error } = await supabase.rpc('toggle_api_key', {
+        p_name: name,
+        p_enabled: enabled
+      })
+
+      if (error) {
+        console.error('切换 API Key 状态失败:', error)
+        toast.error('切换 API Key 状态失败: ' + error.message)
+        return
+      }
+
+      toast.success(`API Key 已${enabled ? '启用' : '禁用'}`)
+      // 重新加载数据
+      await loadApiKeys()
+    } catch (error) {
+      console.error('切换 API Key 状态出错:', error)
+      toast.error('切换 API Key 状态出错')
+    }
   }
 
   // 模版管理函数
@@ -161,14 +352,132 @@ export function Setting() {
     setCommonVariables(prev => [...prev, newVariable])
   }
 
-  const handleUpdateCommonVariable = (id: string, value: string, title?: string) => {
-    setCommonVariables(prev => prev.map(item => 
-      item.id === id ? { ...item, value, title: title || item.title, isNew: false } : item
-    ))
+  const handleUpdateCommonVariable = async (id: string, value: string, title?: string) => {
+    try {
+      // 如果是新的常用变量，需要保存到数据库
+      const variable = commonVariables.find(item => item.id === id)
+      if (variable?.isNew) {
+        if (!title?.trim()) {
+          toast.error('变量名称不能为空')
+          return
+        }
+        if (!value?.trim()) {
+          toast.error('变量值不能为空')
+          return
+        }
+
+        // 调用数据库函数保存新的常用变量
+        const { error } = await supabase.rpc('upsert_variable', {
+          p_name: title,
+          p_value: value,
+          p_enabled: true
+        })
+
+        if (error) {
+          console.error('保存常用变量失败:', error)
+          toast.error('保存常用变量失败: ' + error.message)
+          return
+        }
+
+        toast.success('常用变量保存成功')
+        // 重新加载数据
+        await loadCommonVariables()
+      } else {
+        // 更新现有的常用变量
+        const currentVariable = commonVariables.find(item => item.id === id)
+        if (!currentVariable) {
+          toast.error('找不到要更新的变量')
+          return
+        }
+
+        const newTitle = title || currentVariable.title
+        const newValue = value
+
+        if (!newTitle?.trim()) {
+          toast.error('变量名称不能为空')
+          return
+        }
+        if (!newValue?.trim()) {
+          toast.error('变量值不能为空')
+          return
+        }
+
+        // 调用数据库函数更新现有的常用变量
+        const { error } = await supabase.rpc('update_variable_by_name', {
+          p_original_name: currentVariable.originalTitle || currentVariable.title,
+          p_new_name: newTitle,
+          p_value: newValue,
+          p_enabled: currentVariable.enabled ?? true
+        })
+
+        if (error) {
+          console.error('更新常用变量失败:', error)
+          toast.error('更新常用变量失败: ' + error.message)
+          return
+        }
+
+        toast.success('常用变量更新成功')
+        // 重新加载数据
+        await loadCommonVariables()
+      }
+    } catch (error) {
+      console.error('更新常用变量出错:', error)
+      toast.error('更新常用变量出错')
+    }
   }
 
-  const handleDeleteCommonVariable = (id: string) => {
-    setCommonVariables(prev => prev.filter(item => item.id !== id))
+  const handleDeleteCommonVariable = async (id: string) => {
+    try {
+      const variable = commonVariables.find(item => item.id === id)
+      
+      if (variable?.isNew) {
+        // 如果是新建的还未保存的常用变量，直接从状态中移除
+        setCommonVariables(prev => prev.filter(item => item.id !== id))
+        return
+      }
+
+      if (variable?.title) {
+        // 调用数据库函数删除常用变量
+        const { error } = await supabase.rpc('delete_variable', {
+          p_name: variable.title
+        })
+
+        if (error) {
+          console.error('删除常用变量失败:', error)
+          toast.error('删除常用变量失败: ' + error.message)
+          return
+        }
+
+        toast.success('常用变量删除成功')
+        // 重新加载数据
+        await loadCommonVariables()
+      }
+    } catch (error) {
+      console.error('删除常用变量出错:', error)
+      toast.error('删除常用变量出错')
+    }
+  }
+
+  const handleToggleCommonVariable = async (name: string, enabled: boolean) => {
+    try {
+      const { error } = await supabase.rpc('toggle_variable', {
+        p_name: name,
+        p_enabled: enabled
+      })
+
+      if (error) {
+        console.error('切换常用变量状态失败:', error)
+        toast.error('切换常用变量状态失败: ' + error.message)
+        return
+      }
+
+      toast.success(`常用变量已${enabled ? '启用' : '禁用'}`)
+      // 重新加载数据
+      await loadCommonVariables()
+    } catch (error) {
+      console.error('切换常用变量状态出错:', error)
+      toast.error('切换常用变量状态出错')
+    }
   }
 
   // 输入归一化：支持中文输入法下的全角数字与小数点转换
@@ -396,7 +705,9 @@ export function Setting() {
                     provider={apiKey.provider}
                     onUpdate={handleUpdateApiKey}
                     onDelete={handleDeleteApiKey}
+                    onToggle={handleToggleApiKey}
                     isNew={apiKey.isNew}
+                    enabled={apiKey.enabled}
                   />
                 ))}
                 
@@ -405,8 +716,17 @@ export function Setting() {
               </div>
             </div>
 
+            {/* 加载状态 */}
+            {isLoadingApiKeys && (
+              <div className="col-span-full text-center py-8">
+                <p className="text-muted-foreground text-sm">
+                  正在加载 API Keys...
+                </p>
+              </div>
+            )}
+
             {/* 空状态 */}
-            {apiKeys.length === 0 && (
+            {!isLoadingApiKeys && apiKeys.length === 0 && (
               <div className="col-span-full text-center py-8">
                 <p className="text-muted-foreground text-sm">
                   还没有添加任何 API Key，点击上方卡片开始添加
@@ -431,7 +751,9 @@ export function Setting() {
                     value={variable.value}
                     onUpdate={handleUpdateCommonVariable}
                     onDelete={handleDeleteCommonVariable}
+                    onToggle={handleToggleCommonVariable}
                     isNew={variable.isNew}
+                    enabled={variable.enabled}
                   />
                 ))}
                 
@@ -440,8 +762,17 @@ export function Setting() {
               </div>
             </div>
 
+            {/* 加载状态 */}
+            {isLoadingCommonVariables && (
+              <div className="col-span-full text-center py-8">
+                <p className="text-muted-foreground text-sm">
+                  正在加载常用变量...
+                </p>
+              </div>
+            )}
+
             {/* 空状态 */}
-            {commonVariables.length === 0 && (
+            {!isLoadingCommonVariables && commonVariables.length === 0 && (
               <div className="col-span-full text-center py-8">
                 <p className="text-muted-foreground text-sm">
                   还没有添加任何常用变量，点击上方卡片开始添加

@@ -76,6 +76,36 @@ BEGIN
 END;
 $$;
 
+-- 创建获取启用的 API Key 的函数（供 Edge Functions 使用）
+CREATE OR REPLACE FUNCTION public.get_enabled_api_key()
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_api_key TEXT;
+BEGIN
+  -- 获取一个启用的 API Key（供 Edge Functions 使用）
+  SELECT key INTO v_api_key
+  FROM public."apikeys"
+  WHERE 是否启用 = true
+  ORDER BY 创建时间 DESC
+  LIMIT 1;
+  
+  -- 更新使用统计
+  IF v_api_key IS NOT NULL THEN
+    UPDATE public."apikeys"
+    SET 
+      使用次数 = 使用次数 + 1,
+      最后使用时间 = NOW()
+    WHERE key = v_api_key;
+  END IF;
+  
+  RETURN v_api_key;
+END;
+$$;
+
 -- 创建添加/更新 API Key 的函数
 CREATE OR REPLACE FUNCTION public.upsert_api_key(
   p_name TEXT,
@@ -92,7 +122,7 @@ DECLARE
   v_user_id UUID;
 BEGIN
   -- 检查是否为管理员
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Only admins can manage API keys';
   END IF;
   
@@ -120,7 +150,7 @@ SET search_path = ''
 AS $$
 BEGIN
   -- 检查是否为管理员
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Only admins can manage API keys';
   END IF;
   
@@ -132,7 +162,10 @@ END;
 $$;
 
 -- 创建切换 API Key 状态的函数
-CREATE OR REPLACE FUNCTION public.toggle_api_key(p_name TEXT, p_enabled BOOLEAN)
+CREATE OR REPLACE FUNCTION public.toggle_api_key(
+  p_name TEXT,
+  p_enabled BOOLEAN
+)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -140,7 +173,7 @@ SET search_path = ''
 AS $$
 BEGIN
   -- 检查是否为管理员
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Only admins can manage API keys';
   END IF;
   
@@ -173,7 +206,7 @@ SET search_path = ''
 AS $$
 BEGIN
   -- 检查是否为管理员
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Only admins can view API keys list';
   END IF;
   
@@ -215,3 +248,44 @@ CREATE TRIGGER trigger_apikeys_updated_at
   BEFORE UPDATE ON public."apikeys"
   FOR EACH ROW
   EXECUTE FUNCTION public.update_apikeys_updated_at();
+
+-- 创建更新 API Key 的函数（通过原始名称）
+CREATE OR REPLACE FUNCTION public.update_api_key_by_name(
+  p_original_name TEXT,
+  p_new_name TEXT,
+  p_key TEXT,
+  p_enabled BOOLEAN DEFAULT true
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_api_key_id UUID;
+  v_user_id UUID;
+BEGIN
+  -- 检查是否为管理员
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Only admins can manage API keys';
+  END IF;
+  
+  v_user_id := auth.uid();
+  
+  -- 更新现有的 API Key
+  UPDATE public."apikeys" 
+  SET 
+    名称 = p_new_name,
+    key = p_key,
+    是否启用 = p_enabled,
+    更新时间 = NOW()
+  WHERE 名称 = p_original_name
+  RETURNING id INTO v_api_key_id;
+  
+  IF v_api_key_id IS NULL THEN
+    RAISE EXCEPTION 'API Key not found: %', p_original_name;
+  END IF;
+  
+  RETURN v_api_key_id;
+END;
+$$;

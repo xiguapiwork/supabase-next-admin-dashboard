@@ -85,7 +85,6 @@ $$;
 CREATE OR REPLACE FUNCTION public.upsert_variable(
   p_name TEXT,
   p_value TEXT,
-  p_description TEXT DEFAULT NULL,
   p_enabled BOOLEAN DEFAULT true
 )
 RETURNS UUID
@@ -98,18 +97,17 @@ DECLARE
   v_user_id UUID;
 BEGIN
   -- 检查是否为管理员
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Only admins can manage variables';
   END IF;
   
   v_user_id := auth.uid();
   
   -- 插入或更新变量
-  INSERT INTO public."common_variables" (变量名, 变量值, 描述, 是否启用, 创建者) 
-  VALUES (p_name, p_value, p_description, p_enabled, v_user_id)
+  INSERT INTO public."common_variables" (变量名, 变量值, 是否启用, 创建者) 
+  VALUES (p_name, p_value, p_enabled, v_user_id)
   ON CONFLICT (变量名) DO UPDATE SET
     变量值 = EXCLUDED.变量值,
-    描述 = EXCLUDED.描述,
     是否启用 = EXCLUDED.是否启用,
     更新时间 = NOW()
   RETURNING id INTO v_variable_id;
@@ -127,19 +125,22 @@ SET search_path = ''
 AS $$
 BEGIN
   -- 检查是否为管理员
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Only admins can manage variables';
   END IF;
   
   -- 删除变量
-  DELETE FROM public."common_variables" WHERE 名称 = p_name;
+  DELETE FROM public."common_variables" WHERE 变量名 = p_name;
   
   RETURN FOUND;
 END;
 $$;
 
 -- 创建切换变量状态的函数
-CREATE OR REPLACE FUNCTION public.toggle_variable(p_name TEXT, p_enabled BOOLEAN)
+CREATE OR REPLACE FUNCTION public.toggle_variable(
+  p_name TEXT,
+  p_enabled BOOLEAN
+)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -147,7 +148,7 @@ SET search_path = ''
 AS $$
 BEGIN
   -- 检查是否为管理员
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Only admins can manage variables';
   END IF;
   
@@ -156,7 +157,7 @@ BEGIN
   SET 
     是否启用 = p_enabled,
     更新时间 = NOW()
-  WHERE 名称 = p_name;
+  WHERE 变量名 = p_name;
   
   RETURN FOUND;
 END;
@@ -166,12 +167,12 @@ $$;
 CREATE OR REPLACE FUNCTION public.get_variables_list()
 RETURNS TABLE (
   id UUID,
-  名称 TEXT,
-  值 TEXT,
-  描述 TEXT,
+  变量名 TEXT,
+  变量值 TEXT,
   是否启用 BOOLEAN,
+  使用次数 INTEGER,
+  最后使用时间 TIMESTAMP WITH TIME ZONE,
   创建时间 TIMESTAMP WITH TIME ZONE,
-  更新时间 TIMESTAMP WITH TIME ZONE,
   创建者名称 TEXT
 )
 LANGUAGE plpgsql
@@ -180,7 +181,7 @@ SET search_path = ''
 AS $$
 BEGIN
   -- 检查是否为管理员
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Only admins can view variables list';
   END IF;
   
@@ -188,12 +189,12 @@ BEGIN
   RETURN QUERY
   SELECT 
     cv.id,
-    cv.名称,
-    cv.值,
-    cv.描述,
+    cv.变量名,
+    cv.变量值,
     cv.是否启用,
+    cv.使用次数,
+    cv.最后使用时间,
     cv.创建时间,
-    cv.更新时间,
     u.username as 创建者名称
   FROM public."common_variables" cv
   LEFT JOIN public."user-management" u ON cv.创建者 = u.id
@@ -205,12 +206,12 @@ $$;
 CREATE OR REPLACE FUNCTION public.get_variable_detail(p_name TEXT)
 RETURNS TABLE (
   id UUID,
-  名称 TEXT,
-  值 TEXT,
-  描述 TEXT,
+  变量名 TEXT,
+  变量值 TEXT,
   是否启用 BOOLEAN,
+  使用次数 INTEGER,
+  最后使用时间 TIMESTAMP WITH TIME ZONE,
   创建时间 TIMESTAMP WITH TIME ZONE,
-  更新时间 TIMESTAMP WITH TIME ZONE,
   创建者名称 TEXT
 )
 LANGUAGE plpgsql
@@ -219,7 +220,7 @@ SET search_path = ''
 AS $$
 BEGIN
   -- 检查是否为管理员
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Only admins can view variable details';
   END IF;
   
@@ -227,16 +228,16 @@ BEGIN
   RETURN QUERY
   SELECT 
     cv.id,
-    cv.名称,
-    cv.值,
-    cv.描述,
+    cv.变量名,
+    cv.变量值,
     cv.是否启用,
+    cv.使用次数,
+    cv.最后使用时间,
     cv.创建时间,
-    cv.更新时间,
     u.username as 创建者名称
   FROM public."common_variables" cv
   LEFT JOIN public."user-management" u ON cv.创建者 = u.id
-  WHERE cv.名称 = p_name;
+  WHERE cv.变量名 = p_name;
 END;
 $$;
 
@@ -256,6 +257,56 @@ CREATE TRIGGER trigger_common_variables_updated_at
   BEFORE UPDATE ON public."common_variables"
   FOR EACH ROW
   EXECUTE FUNCTION public.update_common_variables_updated_at();
+
+-- 创建更新常用变量的函数（通过原始名称）
+CREATE OR REPLACE FUNCTION public.update_variable_by_name(
+  p_original_name TEXT,
+  p_new_name TEXT,
+  p_value TEXT,
+  p_enabled BOOLEAN DEFAULT true
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_variable_id UUID;
+  v_user_id UUID;
+  v_old_value TEXT;
+BEGIN
+  -- 检查是否为管理员
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Only admins can manage variables';
+  END IF;
+  
+  v_user_id := auth.uid();
+  
+  -- 获取旧值用于版本控制
+  SELECT 变量值 INTO v_old_value
+  FROM public."common_variables"
+  WHERE 变量名 = p_original_name;
+  
+  -- 更新现有的常用变量
+  UPDATE public."common_variables" 
+  SET 
+    变量名 = p_new_name,
+    变量值 = p_value,
+    是否启用 = p_enabled,
+    更新时间 = NOW(),
+    最后修改者 = v_user_id,
+    版本号 = 版本号 + 1,
+    上一版本值 = v_old_value
+  WHERE 变量名 = p_original_name
+  RETURNING id INTO v_variable_id;
+  
+  IF v_variable_id IS NULL THEN
+    RAISE EXCEPTION 'Variable not found: %', p_original_name;
+  END IF;
+  
+  RETURN v_variable_id;
+END;
+$$;
 
 -- 常用变量表创建完成，初始为空表格
 -- 管理员可以通过管理界面添加所需的变量

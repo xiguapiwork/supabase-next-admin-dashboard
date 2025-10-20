@@ -20,7 +20,7 @@ const getUserCountsByDay = ({ projectRef, days }: { projectRef: string; days: nu
       days_series d
     LEFT JOIN (
       SELECT
-        date_trunc('day', created_at AT TIME ZONE 'UTC')::date as date,
+        date_trunc('day', created_at AT TIME ZONE 'Asia/Shanghai')::date as date,
         count(id) as users
       FROM
         auth.users
