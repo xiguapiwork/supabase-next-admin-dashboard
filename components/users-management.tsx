@@ -43,8 +43,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { formatPoints } from '@/lib/format-points'
 import { getTableBorderClasses } from '@/lib/table-border-utils'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { UserDetails } from './user-details'
 
-// 模拟用户数据
 const users = [
   {
     id: 1,
@@ -576,6 +577,33 @@ export function UsersManagement() {
   const { pageSize, pointsFormat, tableBorder } = useAppSettings()
   const itemsPerPage = pageSize
 
+  // 查询路由参数，决定是否显示详情页
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const userIdParam = searchParams.get('userId')
+  const detailsUser = userIdParam ? users.find(u => u.id === Number(userIdParam)) : null
+
+  const handleBackToList = () => {
+    // 使用浏览器历史后退，保留上一页面的状态（搜索、分页、排序等）
+    router.back()
+  }
+
+  const handleViewDetails = (user: typeof users[0]) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('userId', String(user.id))
+    router.push(`?${params.toString()}`)
+  }
+
+  if (detailsUser) {
+    return (
+      <div className="flex-1 overflow-auto bg-background">
+        <UserDetails user={detailsUser} onBack={handleBackToList} />
+      </div>
+    )
+  }
+
+  // ... existing code ...
+
   // 过滤和排序用户
   const filteredAndSortedUsers = users
     .filter(user => {
@@ -849,15 +877,24 @@ export function UsersManagement() {
                       </div>
                     </TableCell>
                     <TableCell className={cn("pl-3", getTableBorderClasses(tableBorder).cell)}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-medium">{user.username[0]}</span>
-                        </div>
+                      <button
+                        onClick={() => handleViewDetails(user)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleViewDetails(user); } }}
+                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 hover:bg-accent cursor-pointer"
+                        title="查看详情"
+                        aria-label="查看用户详情"
+                      >
+                        <Avatar className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
+                          <AvatarImage src={user.avatar} alt={user.username} />
+                          <AvatarFallback className="text-base md:text-lg font-medium">
+                            {user.username[0]}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium truncate">{user.username}</div>
-                          <div className="text-sm text-gray-500 dark:text-gray-300 truncate">{user.email}</div>
+                          <div className="font-medium truncate text-left leading-tight">{user.username}</div>
+                          <div className="text-sm text-muted-foreground truncate text-left leading-tight">{user.email}</div>
                         </div>
-                      </div>
+                      </button>
                     </TableCell>
                     <TableCell className={cn("pl-6", getTableBorderClasses(tableBorder).cell)}>
                       <div className="flex flex-wrap gap-1">
@@ -888,7 +925,9 @@ export function UsersManagement() {
                           <DropdownMenuItem onClick={() => handleEditUser(user)}>
                             编辑用户
                           </DropdownMenuItem>
-                          <DropdownMenuItem>查看详情</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewDetails(user)}>
+                            查看详情
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => confirmDeleteUser(user)} className="text-red-600">
                             删除用户
                           </DropdownMenuItem>

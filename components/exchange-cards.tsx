@@ -51,9 +51,23 @@ import { useAppSettings } from '@/contexts/AppSettingsContext'
 import { formatPoints } from '@/lib/format-points'
 import { getTableBorderClasses } from '@/lib/table-border-utils'
 import { toast } from 'sonner'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 // 模拟兑换卡数据
-const exchangeCards = [
+interface ExchangeCard {
+  id: number;
+  name: string;
+  cardNumber: string;
+  points: number;
+  status: "已兑换" | "未兑换";
+  redeemer: string;
+  redeemerEmail: string;
+  description: string;
+  createdDate: string;
+  redeemedDate: string;
+  redeemerAvatar?: string;
+}
+const exchangeCards: ExchangeCard[] = [
   {
     id: 1,
     name: '新用户礼包',
@@ -751,7 +765,8 @@ export function ExchangeCards() {
                         />
                       </div>
                     </TableCell>
-                    <TableCell className={cn("pl-3", getTableBorderClasses(tableBorder).cell)}>
+
+                    <TableCell className={getTableBorderClasses(tableBorder).cell}>
                       <div className="font-medium">{card.name}</div>
                     </TableCell>
                     <TableCell className={getTableBorderClasses(tableBorder).cell}>
@@ -784,27 +799,18 @@ export function ExchangeCards() {
                       </div>
                     </TableCell>
                     <TableCell className={cn("pl-3", getTableBorderClasses(tableBorder).cell)}>
-                      {card.redeemer ? (
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm font-medium">{card.redeemer[0]}</span>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium truncate">{card.redeemer}</div>
-                            <div className="text-sm text-gray-500 dark:text-gray-300 truncate">{card.redeemerEmail}</div>
-                          </div>
+                      <div className="flex w-full items-center gap-3 rounded-md px-2 py-2">
+                        <Avatar className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
+                          <AvatarImage src={card.redeemerAvatar} alt={card.redeemer || '未兑换'} />
+                          <AvatarFallback className="text-base md:text-lg font-medium">
+                            {card.redeemer ? card.redeemer[0] : '-'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className={cn("font-medium truncate text-left leading-tight", !card.redeemer && "text-gray-400")}>{card.redeemer || '-'}</div>
+                          <div className={cn("text-sm truncate text-left leading-tight", card.redeemer ? "text-muted-foreground" : "text-gray-400")}>{card.redeemerEmail || '-'}</div>
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                            <span className="text-sm text-gray-400">-</span>
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-400">-</div>
-                            <div className="text-sm text-gray-400">-</div>
-                          </div>
-                        </div>
-                      )}
+                      </div>
                     </TableCell>
                     <TableCell className={getTableBorderClasses(tableBorder).cell}>{card.createdDate}</TableCell>
                     <TableCell className={getTableBorderClasses(tableBorder).cell}>{formatRedeemedDate(card.redeemedDate)}</TableCell>

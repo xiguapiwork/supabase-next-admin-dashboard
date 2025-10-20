@@ -52,6 +52,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 // 模拟任务日志数据
 const taskLogs = [
@@ -459,13 +460,14 @@ export function TaskLogs() {
                       </div>
                     </TableCell>
                     <TableCell className={cn("", getTableBorderClasses(tableBorder).cell)}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-medium">{log.operatorUser[0]}</span>
-                        </div>
+                      <div className="flex w-full items-center gap-3 rounded-md px-2 py-2">
+                        <Avatar className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
+                          <AvatarImage src={undefined} alt={log.operatorUser} />
+                          <AvatarFallback className="text-base md:text-lg font-medium">{log.operatorUser[0]}</AvatarFallback>
+                        </Avatar>
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium truncate">{log.operatorUser}</div>
-                          <div className="text-sm text-gray-500 truncate">{log.operatorEmail}</div>
+                          <div className="font-medium truncate text-left leading-tight">{log.operatorUser}</div>
+                          <div className="text-sm text-muted-foreground truncate text-left leading-tight">{log.operatorEmail}</div>
                         </div>
                       </div>
                     </TableCell>
