@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,7 +22,7 @@ export default function TestDbPage() {
   
   const supabase = createClient()
 
-  const loadUserInfo = async () => {
+  const loadUserInfo = useCallback(async () => {
     try {
       // 获取当前用户
       const { data: { user } } = await supabase.auth.getUser()
@@ -40,11 +40,11 @@ export default function TestDbPage() {
     } catch (error) {
       console.error('加载用户信息失败:', error)
     }
-  }
+  }, [supabase])
 
   useEffect(() => {
     loadUserInfo()
-  }, [])
+  }, [loadUserInfo])
 
   const testFunction = async (functionName: string, params: Record<string, unknown> = {}) => {
     setLoading(true)

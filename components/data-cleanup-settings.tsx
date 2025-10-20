@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import { createClient } from '@supabase/supabase-js';
 
 interface DataCleanupSettingsProps {
   user: {
@@ -23,6 +24,11 @@ interface DataCleanupSettingsProps {
     email?: string;
   };
 }
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export function DataCleanupSettings({ user: _user }: DataCleanupSettingsProps) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -40,6 +46,7 @@ export function DataCleanupSettings({ user: _user }: DataCleanupSettingsProps) {
   
   // 确认对话框状态
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     type: 'users' | 'cards' | 'logs';
     title: string;
@@ -47,19 +54,52 @@ export function DataCleanupSettings({ user: _user }: DataCleanupSettingsProps) {
     action: () => void;
   } | null>(null);
 
+  // 调用清理API的通用函数
+  const callCleanupAPI = async (type: string, params: Record<string, unknown>) => {
+    setIsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('请先登录');
+        return;
+      }
+
+      const response = await fetch('/api/admin/cleanup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ type, ...params }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '清理操作失败');
+      }
+
+      toast.success(result.message);
+      return result;
+    } catch (error) {
+      console.error('清理操作失败:', error);
+      toast.error(error instanceof Error ? error.message : '清理操作失败');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // 处理清除长时间未登录用户
   const handleCleanupInactiveUsers = () => {
     setConfirmAction({
       type: 'users',
       title: '确认清除长时间未登录用户',
       description: `将清除超过 ${inactiveUserDays} 天未登录且积分小于等于 ${inactiveUserPoints} 的用户。此操作不可撤销。`,
-      action: () => {
-        // 这里应该调用实际的API
-        console.log('清除长时间未登录用户:', {
-          days: inactiveUserDays,
-          maxPoints: inactiveUserPoints
+      action: async () => {
+        await callCleanupAPI('inactive_users', {
+          days: parseInt(inactiveUserDays),
+          maxPoints: parseInt(inactiveUserPoints)
         });
-        toast.success(`已清除超过 ${inactiveUserDays} 天未登录的用户`);
         setIsConfirmDialogOpen(false);
       }
     });
@@ -72,13 +112,11 @@ export function DataCleanupSettings({ user: _user }: DataCleanupSettingsProps) {
       type: 'cards',
       title: '确认清除兑换卡',
       description: `将清除创建超过 ${cardCleanupDays} 天且状态为"${cardCleanupStatus}"的兑换卡。此操作不可撤销。`,
-      action: () => {
-        // 这里应该调用实际的API
-        console.log('清除兑换卡:', {
-          days: cardCleanupDays,
+      action: async () => {
+        await callCleanupAPI('exchange_cards', {
+          days: parseInt(cardCleanupDays),
           status: cardCleanupStatus
         });
-        toast.success(`已清除超过 ${cardCleanupDays} 天的${cardCleanupStatus}兑换卡`);
         setIsConfirmDialogOpen(false);
       }
     });
@@ -91,12 +129,10 @@ export function DataCleanupSettings({ user: _user }: DataCleanupSettingsProps) {
       type: 'logs',
       title: '确认清除积分日志',
       description: `将清除超过 ${logCleanupDays} 天的积分记录。此操作不可撤销。`,
-      action: () => {
-        // 这里应该调用实际的API
-        console.log('清除积分日志:', {
-          days: logCleanupDays
+      action: async () => {
+        await callCleanupAPI('points_logs', {
+          days: parseInt(logCleanupDays)
         });
-        toast.success(`已清除超过 ${logCleanupDays} 天的积分日志`);
         setIsConfirmDialogOpen(false);
       }
     });
@@ -148,6 +184,7 @@ export function DataCleanupSettings({ user: _user }: DataCleanupSettingsProps) {
             size="sm" 
             onClick={handleCleanupInactiveUsers}
             className="w-full"
+            disabled={isLoading}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             清除长时间未登录用户
@@ -185,6 +222,7 @@ export function DataCleanupSettings({ user: _user }: DataCleanupSettingsProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="已兑换">已兑换</SelectItem>
+                  <SelectItem value="可用">可用</SelectItem>
                   <SelectItem value="所有状态">所有状态</SelectItem>
                 </SelectContent>
               </Select>
@@ -195,6 +233,7 @@ export function DataCleanupSettings({ user: _user }: DataCleanupSettingsProps) {
             size="sm" 
             onClick={handleCleanupCards}
             className="w-full"
+            disabled={isLoading}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             清除兑换卡
@@ -228,6 +267,7 @@ export function DataCleanupSettings({ user: _user }: DataCleanupSettingsProps) {
             size="sm" 
             onClick={handleCleanupLogs}
             className="w-full"
+            disabled={isLoading}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             清除积分日志
@@ -257,8 +297,9 @@ export function DataCleanupSettings({ user: _user }: DataCleanupSettingsProps) {
             <Button
               variant="destructive"
               onClick={confirmAction?.action}
+              disabled={isLoading}
             >
-              确认清除
+              {isLoading ? '清除中...' : '确认清除'}
             </Button>
           </DialogFooter>
         </DialogContent>

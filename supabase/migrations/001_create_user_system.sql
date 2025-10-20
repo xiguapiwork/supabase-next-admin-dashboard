@@ -23,7 +23,7 @@ FOR UPDATE USING (bucket_id = 'default-avatar');
 CREATE TABLE public."user-management" (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
-  role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'paid')),
   points INTEGER NOT NULL DEFAULT 0,
   avatar TEXT,
   备注 TEXT,
@@ -176,3 +176,6 @@ BEGIN
   WHERE p.id = user_id;
 END;
 $$;
+
+-- 添加角色字段注释说明
+COMMENT ON COLUMN public."user-management".role IS '用户角色：user(普通用户), admin(管理员), paid(付费用户)';

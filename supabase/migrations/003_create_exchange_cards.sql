@@ -4,7 +4,7 @@ CREATE TABLE public."exchange-cards" (
   卡片名称 TEXT NOT NULL,
   积分数量 INTEGER NOT NULL CHECK (积分数量 > 0),
   备注 TEXT,
-  状态 TEXT DEFAULT '未兑换' CHECK (状态 IN ('未兑换', '已兑换', '已过期')),
+  状态 BOOLEAN DEFAULT true, -- true: 可用, false: 已兑换
   兑换人 UUID REFERENCES public."user-management"(id) ON DELETE SET NULL,
   创建时间 TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   兑换时间 TIMESTAMP WITH TIME ZONE
@@ -48,9 +48,9 @@ FOR UPDATE USING (
 -- 用户可以兑换卡片（更新兑换人和兑换时间）
 CREATE POLICY "Users can redeem cards" ON public."exchange-cards"
 FOR UPDATE USING (
-  状态 = '未兑换' AND 兑换人 IS NULL
+  状态 = true AND 兑换人 IS NULL
 ) WITH CHECK (
-  兑换人 = auth.uid() AND 状态 = '已兑换' AND 兑换时间 IS NOT NULL
+  兑换人 = auth.uid() AND 状态 = false AND 兑换时间 IS NOT NULL
 );
 
 -- 管理员可以删除兑换卡
@@ -78,7 +78,7 @@ SET search_path = ''
 AS $$
 DECLARE
   card_points INTEGER;
-  current_status TEXT;
+  current_status BOOLEAN;
 BEGIN
   -- 检查卡片是否存在且未被兑换（加行锁防止并发兑换）
   SELECT 积分数量, 状态 INTO card_points, current_status
@@ -86,13 +86,13 @@ BEGIN
   WHERE 卡号 = card_number
   FOR UPDATE;
   
-  IF NOT FOUND OR current_status != '未兑换' THEN
+  IF NOT FOUND OR current_status != true THEN
     RETURN FALSE;
   END IF;
   
   -- 更新卡片状态
   UPDATE public."exchange-cards"
-  SET 状态 = '已兑换',
+  SET 状态 = false,
       兑换人 = user_id,
       兑换时间 = NOW()
   WHERE 卡号 = card_number;
@@ -119,7 +119,7 @@ RETURNS TABLE (
   卡片名称 TEXT,
   积分数量 INTEGER,
   备注 TEXT,
-  状态 TEXT,
+  状态 BOOLEAN,
   创建时间 TIMESTAMP WITH TIME ZONE,
   兑换时间 TIMESTAMP WITH TIME ZONE
 )
@@ -140,9 +140,8 @@ $$;
 CREATE OR REPLACE FUNCTION get_exchange_cards_stats()
 RETURNS TABLE (
   总数量 BIGINT,
-  未兑换数量 BIGINT,
-  已兑换数量 BIGINT,
-  已过期数量 BIGINT
+  可用数量 BIGINT,
+  已兑换数量 BIGINT
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -152,9 +151,8 @@ BEGIN
   RETURN QUERY
   SELECT 
     COUNT(*) as 总数量,
-    COUNT(*) FILTER (WHERE 状态 = '未兑换') as 未兑换数量,
-    COUNT(*) FILTER (WHERE 状态 = '已兑换') as 已兑换数量,
-    COUNT(*) FILTER (WHERE 状态 = '已过期') as 已过期数量
+    COUNT(*) FILTER (WHERE 状态 = true) as 可用数量,
+    COUNT(*) FILTER (WHERE 状态 = false) as 已兑换数量
   FROM public."exchange-cards";
 END;
 $$;
