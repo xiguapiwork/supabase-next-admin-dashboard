@@ -25,6 +25,7 @@ import { ExchangeCards } from './exchange-cards'
 import { PointsLogs } from './points-logs'
 import { TaskLogs } from './task-logs'
 import { Setting } from './setting'
+import { DatabaseTest } from './database-test'
 import { AppSettingsProvider } from '@/contexts/AppSettingsContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -113,6 +114,8 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
         return <TaskLogs />
       case '/setting':
         return <Setting />
+      case '/database-test':
+        return <DatabaseTest />
       default:
         return <Dashboard />
     }

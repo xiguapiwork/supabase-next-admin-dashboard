@@ -17,19 +17,19 @@ FOR SELECT USING (bucket_id = 'avatar');
 CREATE POLICY "Users can upload their own avatar" ON storage.objects
 FOR INSERT WITH CHECK (
   bucket_id = 'avatar' 
-  AND (storage.foldername(name))[1] = auth.uid()::text
+  AND (storage.foldername(name))[1] = (select auth.uid())::text
 );
 
 -- 用户只能更新自己的头像
 CREATE POLICY "Users can update their own avatar" ON storage.objects
 FOR UPDATE USING (
   bucket_id = 'avatar' 
-  AND (storage.foldername(name))[1] = auth.uid()::text
+  AND (storage.foldername(name))[1] = (select auth.uid())::text
 );
 
 -- 用户只能删除自己的头像
 CREATE POLICY "Users can delete their own avatar" ON storage.objects
 FOR DELETE USING (
   bucket_id = 'avatar' 
-  AND (storage.foldername(name))[1] = auth.uid()::text
+  AND (storage.foldername(name))[1] = (select auth.uid())::text
 );

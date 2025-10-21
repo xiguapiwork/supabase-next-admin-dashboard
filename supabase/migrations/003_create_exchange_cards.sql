@@ -14,43 +14,36 @@ CREATE TABLE public."exchange-cards" (
 ALTER TABLE public."exchange-cards" ENABLE ROW LEVEL SECURITY;
 
 -- 创建RLS策略
--- 管理员可以查看所有兑换卡
-CREATE POLICY "Admins can view all exchange cards" ON public."exchange-cards"
+-- 管理员可以查看所有兑换卡，用户可以查看自己兑换的卡片
+CREATE POLICY "select_exchange_cards" ON public."exchange-cards"
 FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM public."user-management" 
-    WHERE id = auth.uid() AND role = 'admin'
-  )
+    WHERE id = (select auth.uid()) AND role = 'admin'
+  ) OR 兑换人 = (select auth.uid())
 );
-
--- 用户只能查看自己兑换的卡片
-CREATE POLICY "Users can view their own exchange cards" ON public."exchange-cards"
-FOR SELECT USING (兑换人 = auth.uid());
 
 -- 管理员可以插入新的兑换卡
 CREATE POLICY "Admins can insert exchange cards" ON public."exchange-cards"
 FOR INSERT WITH CHECK (
   EXISTS (
     SELECT 1 FROM public."user-management" 
-    WHERE id = auth.uid() AND role = 'admin'
+    WHERE id = (select auth.uid()) AND role = 'admin'
   )
 );
 
--- 管理员可以更新兑换卡
-CREATE POLICY "Admins can update exchange cards" ON public."exchange-cards"
+-- 管理员可以更新兑换卡，用户可以兑换卡片
+CREATE POLICY "update_exchange_cards" ON public."exchange-cards"
 FOR UPDATE USING (
   EXISTS (
     SELECT 1 FROM public."user-management" 
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
-
--- 用户可以兑换卡片（更新兑换人和兑换时间）
-CREATE POLICY "Users can redeem cards" ON public."exchange-cards"
-FOR UPDATE USING (
-  状态 = true AND 兑换人 IS NULL
+    WHERE id = (select auth.uid()) AND role = 'admin'
+  ) OR (状态 = true AND 兑换人 IS NULL)
 ) WITH CHECK (
-  兑换人 = auth.uid() AND 状态 = false AND 兑换时间 IS NOT NULL
+  EXISTS (
+    SELECT 1 FROM public."user-management" 
+    WHERE id = (select auth.uid()) AND role = 'admin'
+  ) OR (兑换人 = (select auth.uid()) AND 状态 = false AND 兑换时间 IS NOT NULL)
 );
 
 -- 管理员可以删除兑换卡
@@ -58,7 +51,7 @@ CREATE POLICY "Admins can delete exchange cards" ON public."exchange-cards"
 FOR DELETE USING (
   EXISTS (
     SELECT 1 FROM public."user-management" 
-    WHERE id = auth.uid() AND role = 'admin'
+    WHERE id = (select auth.uid()) AND role = 'admin'
   )
 );
 

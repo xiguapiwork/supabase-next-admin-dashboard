@@ -33,29 +33,23 @@ CREATE INDEX idx_points_log_task_id ON public."points_log"(任务ID);
 ALTER TABLE public."points_log" ENABLE ROW LEVEL SECURITY;
 
 -- 创建RLS策略
--- 用户只能查看自己的积分记录
-CREATE POLICY "Users can view their own points log" ON public."points_log"
-FOR SELECT USING (用户ID = auth.uid());
-
--- 管理员可以查看所有积分记录
-CREATE POLICY "Admins can view all points log" ON public."points_log"
+-- 用户可以查看自己的积分记录，管理员可以查看所有积分记录
+CREATE POLICY "select_points_log" ON public."points_log"
 FOR SELECT USING (
+  用户ID = (select auth.uid()) OR 
   EXISTS (
     SELECT 1 FROM public."user-management" 
-    WHERE id = auth.uid() AND role = 'admin'
+    WHERE id = (select auth.uid()) AND role = 'admin'
   )
 );
 
--- 系统可以插入积分记录（通过函数）
-CREATE POLICY "System can insert points log" ON public."points_log"
-FOR INSERT WITH CHECK (true);
-
--- 管理员可以插入积分记录（手动调整）
-CREATE POLICY "Admins can insert points log" ON public."points_log"
+-- 系统和管理员可以插入积分记录
+CREATE POLICY "insert_points_log" ON public."points_log"
 FOR INSERT WITH CHECK (
+  true OR 
   EXISTS (
     SELECT 1 FROM public."user-management" 
-    WHERE id = auth.uid() AND role = 'admin'
+    WHERE id = (select auth.uid()) AND role = 'admin'
   )
 );
 

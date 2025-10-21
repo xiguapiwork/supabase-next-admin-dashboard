@@ -15,7 +15,7 @@ BEGIN
   NEW.updated_at = NOW() AT TIME ZONE 'Asia/Shanghai';
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = '';
 
 -- 更新 apikeys 表的触发器函数
 CREATE OR REPLACE FUNCTION public.update_apikeys_updated_at()
@@ -24,7 +24,7 @@ BEGIN
   NEW.更新时间 = NOW() AT TIME ZONE 'Asia/Shanghai';
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = '';
 
 -- 更新 common_variables 表的触发器函数
 CREATE OR REPLACE FUNCTION public.update_common_variables_updated_at()
@@ -33,7 +33,7 @@ BEGIN
   NEW.更新时间 = NOW() AT TIME ZONE 'Asia/Shanghai';
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = '';
 
 -- 更新 app_config 表的触发器函数
 CREATE OR REPLACE FUNCTION trigger_set_timestamp()
@@ -42,7 +42,7 @@ BEGIN
   NEW.更新时间 = NOW() AT TIME ZONE 'Asia/Shanghai';
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = '';
 
 -- 4. 更新现有函数中的时间处理为中国时区
 -- 更新 update_variable_by_name 函数中的时间处理
@@ -174,7 +174,7 @@ RETURNS TIMESTAMPTZ AS $$
 BEGIN
   RETURN NOW() AT TIME ZONE 'Asia/Shanghai';
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = '';
 
 -- 格式化中国时间为字符串
 CREATE OR REPLACE FUNCTION public.format_china_time(input_time TIMESTAMPTZ)
@@ -182,7 +182,7 @@ RETURNS TEXT AS $$
 BEGIN
   RETURN to_char(input_time AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS');
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = '';
 
 COMMENT ON FUNCTION public.get_china_time() IS '获取当前中国时间';
 COMMENT ON FUNCTION public.format_china_time(TIMESTAMPTZ) IS '将时间戳格式化为中国时区的字符串';

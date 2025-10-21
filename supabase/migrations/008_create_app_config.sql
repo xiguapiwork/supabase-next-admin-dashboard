@@ -27,27 +27,23 @@ CREATE INDEX idx_app_config_parent_sort ON public.app_config(parent_id, 排序�
 -- 启用 RLS (Row Level Security)
 ALTER TABLE public.app_config ENABLE ROW LEVEL SECURITY;
 
--- RLS 策略：管理员可以进行所有操作
-CREATE POLICY "admin_select_config" ON public.app_config
-FOR SELECT USING (is_admin());
+-- RLS 策略：管理员可以查看所有配置，所有用户可以读取配置
+CREATE POLICY "select_config" ON public.app_config
+FOR SELECT USING (public.is_admin() OR true);
 
 CREATE POLICY "admin_insert_config" ON public.app_config
-FOR INSERT WITH CHECK (is_admin());
+FOR INSERT WITH CHECK (public.is_admin());
 
 CREATE POLICY "admin_update_config" ON public.app_config
-FOR UPDATE USING (is_admin());
+FOR UPDATE USING (public.is_admin());
 
 CREATE POLICY "admin_delete_config" ON public.app_config
-FOR DELETE USING (is_admin());
-
--- RLS 策略：所有用户可以读取配置（用于获取功能积分配置）
-CREATE POLICY "public_read_config" ON public.app_config
-FOR SELECT USING (true);
+FOR DELETE USING (public.is_admin());
 
 -- 创建管理函数
 
 -- 1. 获取功能的积分消耗
-CREATE OR REPLACE FUNCTION get_function_points(function_name TEXT)
+CREATE OR REPLACE FUNCTION public.get_function_points(function_name TEXT)
 RETURNS INTEGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -66,7 +62,7 @@ END;
 $$;
 
 -- 2. 获取分类下的所有功能
-CREATE OR REPLACE FUNCTION get_functions_by_category(category_name TEXT)
+CREATE OR REPLACE FUNCTION public.get_functions_by_category(category_name TEXT)
 RETURNS TABLE(
   id UUID,
   功能名称 TEXT,
@@ -107,7 +103,7 @@ END;
 $$;
 
 -- 3. 获取完整的配置树结构
-CREATE OR REPLACE FUNCTION get_app_config_tree()
+CREATE OR REPLACE FUNCTION public.get_app_config_tree()
 RETURNS TABLE(
   id UUID,
   parent_id UUID,
@@ -159,7 +155,7 @@ END;
 $$;
 
 -- 4. 添加或更新配置（管理员专用）
-CREATE OR REPLACE FUNCTION upsert_app_config(
+CREATE OR REPLACE FUNCTION public.upsert_app_config(
   config_id UUID DEFAULT NULL,
   p_parent_id UUID DEFAULT NULL,
   p_配置名称 TEXT DEFAULT NULL,
@@ -178,7 +174,7 @@ DECLARE
   current_user_id UUID;
 BEGIN
   -- 检查管理员权限
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION '权限不足：只有管理员可以管理配置';
   END IF;
   
@@ -212,7 +208,7 @@ END;
 $$;
 
 -- 5. 删除配置（管理员专用）
-CREATE OR REPLACE FUNCTION delete_app_config(config_id UUID)
+CREATE OR REPLACE FUNCTION public.delete_app_config(config_id UUID)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -220,7 +216,7 @@ SET search_path = ''
 AS $$
 BEGIN
   -- 检查管理员权限
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION '权限不足：只有管理员可以删除配置';
   END IF;
   
@@ -231,7 +227,7 @@ END;
 $$;
 
 -- 6. 获取配置列表（管理员专用）
-CREATE OR REPLACE FUNCTION get_app_config_list()
+CREATE OR REPLACE FUNCTION public.get_app_config_list()
 RETURNS TABLE(
   id UUID,
   parent_id UUID,
@@ -251,7 +247,7 @@ SET search_path = ''
 AS $$
 BEGIN
   -- 检查管理员权限
-  IF NOT is_admin() THEN
+  IF NOT public.is_admin() THEN
     RAISE EXCEPTION '权限不足：只有管理员可以查看配置列表';
   END IF;
   
@@ -266,8 +262,8 @@ BEGIN
     ac.备注,
     ac.创建时间,
     ac.更新时间,
-    creator.email as 创建者_邮箱,
-    modifier.email as 最后修改者_邮箱
+    creator.email::TEXT as 创建者_邮箱,
+    modifier.email::TEXT as 最后修改者_邮箱
   FROM public.app_config ac
   LEFT JOIN auth.users creator ON ac.创建者 = creator.id
   LEFT JOIN auth.users modifier ON ac.最后修改者 = modifier.id

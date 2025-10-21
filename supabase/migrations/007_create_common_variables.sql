@@ -32,9 +32,9 @@ CREATE INDEX idx_common_variables_created_at ON public."common_variables"(创建
 -- 启用 RLS (Row Level Security)
 ALTER TABLE public."common_variables" ENABLE ROW LEVEL SECURITY;
 
--- RLS 策略：只有管理员可以查看所有变量
-CREATE POLICY "admin_select_variables" ON public."common_variables"
-FOR SELECT USING (is_admin());
+-- RLS 策略：管理员可以查看所有变量，系统可以读取启用的变量
+CREATE POLICY "select_variables" ON public."common_variables"
+FOR SELECT USING (is_admin() OR 是否启用 = true);
 
 -- 只有管理员可以插入变量
 CREATE POLICY "admin_insert_variables" ON public."common_variables"
@@ -47,10 +47,6 @@ FOR UPDATE USING (is_admin());
 -- 只有管理员可以删除变量
 CREATE POLICY "admin_delete_variables" ON public."common_variables"
 FOR DELETE USING (is_admin());
-
--- 系统服务可以读取启用的变量（用于 Edge Functions）
-CREATE POLICY "system_read_enabled_variables" ON public."common_variables"
-FOR SELECT USING (是否启用 = true);
 
 -- 创建获取变量值的函数（供应用程序使用）
 CREATE OR REPLACE FUNCTION public.get_variable(p_name TEXT)

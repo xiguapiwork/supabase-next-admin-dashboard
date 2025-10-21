@@ -39,16 +39,13 @@ ALTER TABLE public."user-management" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Profiles are viewable by everyone" ON public."user-management"
 FOR SELECT USING (true);
 
--- 用户只能更新自己的资料
-CREATE POLICY "Users can update own profile" ON public."user-management"
-FOR UPDATE USING (auth.uid() = id);
-
--- 管理员可以更新任何用户的资料
-CREATE POLICY "Admins can update any profile" ON public."user-management"
+-- 用户可以更新自己的资料，管理员可以更新任何用户的资料
+CREATE POLICY "update_user_profile" ON public."user-management"
 FOR UPDATE USING (
+  (select auth.uid()) = id OR 
   EXISTS (
     SELECT 1 FROM public."user-management" 
-    WHERE id = auth.uid() AND role = 'admin'
+    WHERE id = (select auth.uid()) AND role = 'admin'
   )
 );
 
@@ -136,7 +133,7 @@ CREATE TRIGGER handle_profiles_updated_at
 
 -- 11. 创建辅助函数
 -- 检查是否为管理员
-CREATE OR REPLACE FUNCTION is_admin(user_id UUID DEFAULT auth.uid())
+CREATE OR REPLACE FUNCTION public.is_admin(user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER

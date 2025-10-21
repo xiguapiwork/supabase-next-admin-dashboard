@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, CreditCard, FileText, Settings, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Users, CreditCard, FileText, Settings, Database, Menu, X } from 'lucide-react'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -54,6 +54,13 @@ const navigation = [
     icon: Settings,
     current: false,
     displayName: '设置 Setting'
+  },
+  {
+    name: 'Database Test',
+    href: '/database-test',
+    icon: Database,
+    current: false,
+    displayName: '数据库测试 Database Test'
   },
 ]
 

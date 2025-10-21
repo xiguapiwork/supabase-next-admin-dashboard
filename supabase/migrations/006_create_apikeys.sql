@@ -27,9 +27,9 @@ CREATE INDEX idx_apikeys_created_at ON public."apikeys"(创建时间);
 -- 启用 RLS (Row Level Security)
 ALTER TABLE public."apikeys" ENABLE ROW LEVEL SECURITY;
 
--- RLS 策略：只有管理员可以查看 API Keys
-CREATE POLICY "admin_select_apikeys" ON public."apikeys"
-FOR SELECT USING (is_admin());
+-- RLS 策略：管理员可以查看所有API Keys，系统可以读取启用的API Keys
+CREATE POLICY "select_apikeys" ON public."apikeys"
+FOR SELECT USING (is_admin() OR 是否启用 = true);
 
 -- 只有管理员可以插入 API Keys
 CREATE POLICY "admin_insert_apikeys" ON public."apikeys"
@@ -42,10 +42,6 @@ FOR UPDATE USING (is_admin());
 -- 只有管理员可以删除 API Keys
 CREATE POLICY "admin_delete_apikeys" ON public."apikeys"
 FOR DELETE USING (is_admin());
-
--- 系统服务可以读取启用的 API Keys（用于 Edge Functions）
-CREATE POLICY "system_read_enabled_apikeys" ON public."apikeys"
-FOR SELECT USING (是否启用 = true);
 
 -- 创建获取 API Key 的函数（供 Edge Functions 使用）
 CREATE OR REPLACE FUNCTION public.get_api_key(p_name TEXT)

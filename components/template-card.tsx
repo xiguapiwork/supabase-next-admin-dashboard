@@ -323,7 +323,7 @@ export function TemplateCard({ template, onUpdate, onDelete }: TemplateCardProps
                     onClick={handleSaveEditFeatures}
                     disabled={!isFeaturesValid || (!isFeaturesChanged && !isHeaderChanged)}
                   >
-                    保存
+                    {template.isNew ? '添加' : '保存'}
                   </Button>
                   <Button
                     variant="outline"

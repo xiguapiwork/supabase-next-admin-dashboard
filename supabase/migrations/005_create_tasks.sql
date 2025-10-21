@@ -45,33 +45,27 @@ CREATE INDEX idx_tasks_points_log_id ON public."tasks"(扣除记录ID);
 ALTER TABLE public."tasks" ENABLE ROW LEVEL SECURITY;
 
 -- 创建RLS策略
--- 用户只能查看自己的任务
-CREATE POLICY "Users can view their own tasks" ON public."tasks"
-FOR SELECT USING (用户ID = auth.uid());
-
--- 管理员可以查看所有任务
-CREATE POLICY "Admins can view all tasks" ON public."tasks"
+-- 用户可以查看自己的任务，管理员可以查看所有任务
+CREATE POLICY "select_tasks" ON public."tasks"
 FOR SELECT USING (
+  用户ID = (select auth.uid()) OR 
   EXISTS (
     SELECT 1 FROM public."user-management" 
-    WHERE id = auth.uid() AND role = 'admin'
+    WHERE id = (select auth.uid()) AND role = 'admin'
   )
 );
 
 -- 用户可以创建自己的任务
 CREATE POLICY "Users can create their own tasks" ON public."tasks"
-FOR INSERT WITH CHECK (用户ID = auth.uid());
+FOR INSERT WITH CHECK (用户ID = (select auth.uid()));
 
--- 系统可以更新任务状态（通过边缘函数）
-CREATE POLICY "System can update tasks" ON public."tasks"
-FOR UPDATE USING (true);
-
--- 管理员可以更新任务
-CREATE POLICY "Admins can update tasks" ON public."tasks"
+-- 系统和管理员可以更新任务
+CREATE POLICY "update_tasks" ON public."tasks"
 FOR UPDATE USING (
+  true OR 
   EXISTS (
     SELECT 1 FROM public."user-management" 
-    WHERE id = auth.uid() AND role = 'admin'
+    WHERE id = (select auth.uid()) AND role = 'admin'
   )
 );
 
