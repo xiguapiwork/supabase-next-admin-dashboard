@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Download, Plus, Upload } from 'lucide-react'
+import { Download, Plus } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
@@ -27,7 +27,10 @@ import { TaskLogs } from './task-logs'
 import { Setting } from './setting'
 import { DatabaseTest } from './database-test'
 import { AppSettingsProvider } from '@/contexts/AppSettingsContext'
+import { ExchangeCardsProvider, useExchangeCardsRefresh } from '@/contexts/ExchangeCardsContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 interface AdminAppProps {
   initialPage?: string
@@ -35,10 +38,10 @@ interface AdminAppProps {
 
 const queryClient = new QueryClient()
 
-export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
+function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
   const [currentPage, setCurrentPage] = useState(initialPage)
+  const { triggerRefresh } = useExchangeCardsRefresh()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   const [exportDataType, setExportDataType] = useState('all')
   const [exportColumns, setExportColumns] = useState({
@@ -99,6 +102,268 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
     ipAddress: false,
     userAgent: false
   })
+
+  // 创建兑换卡表单状态
+  const [createCardForm, setCreateCardForm] = useState({
+    name: '',
+    points: '',
+    description: '',
+    quantity: '1'
+  })
+  const [isCreatingCard, setIsCreatingCard] = useState(false)
+  const [createCardErrors, setCreateCardErrors] = useState({
+    name: '',
+    points: '',
+    quantity: ''
+  })
+
+  // 表单验证函数
+  const validateCreateCardForm = () => {
+    const errors = { name: '', points: '', quantity: '' }
+    let isValid = true
+
+    if (!createCardForm.name.trim()) {
+      errors.name = '卡片名称不能为空'
+      isValid = false
+    }
+
+    const points = parseInt(createCardForm.points)
+    if (!createCardForm.points || isNaN(points) || points <= 0) {
+      errors.points = '积分数量必须是大于0的数字'
+      isValid = false
+    }
+
+    const quantity = parseInt(createCardForm.quantity)
+    if (!createCardForm.quantity || isNaN(quantity) || quantity <= 0 || quantity > 100) {
+      errors.quantity = '创建数量必须是1-100之间的数字'
+      isValid = false
+    }
+
+    setCreateCardErrors(errors)
+    return isValid
+  }
+
+  // 重置表单
+  const resetCreateCardForm = () => {
+    setCreateCardForm({
+      name: '',
+      points: '',
+      description: '',
+      quantity: '1'
+    })
+    setCreateCardErrors({
+      name: '',
+      points: '',
+      quantity: ''
+    })
+  }
+
+  // 处理表单输入变化
+  const handleCreateCardFormChange = (field: string, value: string) => {
+    setCreateCardForm(prev => ({ ...prev, [field]: value }))
+    // 清除对应字段的错误信息
+    if (createCardErrors[field as keyof typeof createCardErrors]) {
+      setCreateCardErrors(prev => ({ ...prev, [field]: '' }))
+    }
+  }
+
+  // 提交创建兑换卡表单
+  const handleCreateCard = async () => {
+    if (!validateCreateCardForm()) {
+      return
+    }
+
+    setIsCreatingCard(true)
+    try {
+      const supabase = createClient()
+      
+      // 直接调用数据库函数
+      const { data, error } = await supabase.rpc('batch_create_exchange_cards', {
+        p_card_name: createCardForm.name,
+        p_points: parseInt(createCardForm.points),
+        p_description: createCardForm.description || null,
+        p_quantity: parseInt(createCardForm.quantity)
+      })
+
+      if (error) {
+        throw error
+      }
+
+      console.log('创建成功:', data)
+      
+      // 重置表单并关闭对话框
+      resetCreateCardForm()
+      setIsCreateDialogOpen(false)
+      
+      // 显示成功提示
+      toast.success(`成功创建 ${createCardForm.quantity} 张兑换卡！`)
+      
+      // 触发兑换卡列表刷新
+      triggerRefresh()
+      
+    } catch (error: unknown) {
+      console.error('创建兑换卡失败:', error)
+      const errorMessage = error instanceof Error ? error.message : '请重试'
+      toast.error(`创建兑换卡失败：${errorMessage}`)
+    } finally {
+      setIsCreatingCard(false)
+    }
+  }
+
+  // 处理兑换卡导出
+  const handleExportExchangeCards = async () => {
+    try {
+      const supabase = createClient()
+      
+      // 获取兑换卡数据
+      const { data: exchangeCards, error } = await supabase.rpc('get_exchange_cards_list')
+      
+      if (error) {
+        throw error
+      }
+
+      if (!exchangeCards || exchangeCards.length === 0) {
+        toast.error('没有可导出的数据')
+        return
+      }
+
+      // 根据筛选条件过滤数据
+      let filteredData = exchangeCards
+      if (exportDataType !== 'all') {
+        filteredData = exchangeCards.filter((card: { 状态: boolean }) => {
+          if (exportDataType === '已兑换') {
+            return !card.状态
+          } else if (exportDataType === '未兑换') {
+            return card.状态
+          }
+          return true
+        })
+      }
+
+      if (filteredData.length === 0) {
+        toast.error('筛选条件下没有可导出的数据')
+        return
+      }
+
+      // 获取用户信息以便显示用户名和邮箱
+      const userIds = filteredData
+        .filter((card: { 兑换人: string | null }) => card.兑换人)
+        .map((card: { 兑换人: string | null }) => card.兑换人)
+      
+      let usersData: Array<{id: string, username: string, email: string}> = []
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from('user-management')
+          .select('id, username, email')
+          .in('id', userIds)
+        usersData = users || []
+      }
+
+      // 构建CSV数据
+      const headers: string[] = []
+      const fieldMap: { [key: string]: string } = {
+        name: '卡片名称',
+        cardNumber: '卡号',
+        points: '积分数量',
+        status: '状态',
+        username: '用户名',
+        userEmail: '用户邮箱',
+        description: '备注',
+        createdDate: '创建日期',
+        redeemedDate: '兑换日期'
+      }
+
+      // 根据选择的字段构建表头
+      Object.keys(exportColumns).forEach(key => {
+        if (exportColumns[key as keyof typeof exportColumns]) {
+          headers.push(fieldMap[key])
+        }
+      })
+
+      // 构建数据行
+      const rows = filteredData.map((card: {
+        卡片名称: string;
+        卡号: string;
+        积分数量: number;
+        状态: boolean;
+        兑换人: string | null;
+        备注: string | null;
+        创建时间: string;
+        兑换时间: string | null;
+      }) => {
+        const user = usersData.find(u => u.id === card.兑换人)
+        const row: string[] = []
+        
+        Object.keys(exportColumns).forEach(key => {
+          if (exportColumns[key as keyof typeof exportColumns]) {
+            switch (key) {
+              case 'name':
+                row.push(card.卡片名称 || '')
+                break
+              case 'cardNumber':
+                row.push(card.卡号 || '')
+                break
+              case 'points':
+                row.push(card.积分数量?.toString() || '')
+                break
+              case 'status':
+                row.push(card.状态 ? '未兑换' : '已兑换')
+                break
+              case 'username':
+                row.push(user?.username || '')
+                break
+              case 'userEmail':
+                row.push(user?.email || '')
+                break
+              case 'description':
+                row.push(card.备注 || '')
+                break
+              case 'createdDate':
+                row.push(card.创建时间 ? new Date(card.创建时间).toLocaleString('zh-CN') : '')
+                break
+              case 'redeemedDate':
+                row.push(card.兑换时间 ? new Date(card.兑换时间).toLocaleString('zh-CN') : '')
+                break
+              default:
+                row.push('')
+            }
+          }
+        })
+        
+        return row
+      })
+
+      // 生成CSV内容
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((row: string[]) => row.map((cell: string) => `"${cell.replace(/"/g, '""')}"`).join(','))
+      ].join('\n')
+
+      // 创建并下载文件
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+      const filename = `兑换卡数据_${exportDataType}_${timestamp}.csv`
+      link.setAttribute('download', filename)
+      
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success(`成功导出 ${filteredData.length} 条记录`)
+      setIsExportDialogOpen(false)
+      
+    } catch (error: unknown) {
+      console.error('导出失败:', error)
+      const errorMessage = error instanceof Error ? error.message : '请重试'
+      toast.error(`导出失败：${errorMessage}`)
+    }
+  }
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -413,46 +678,6 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
       case '/exchange-cards':
         return (
           <div className="flex gap-2">
-            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 border-0 shadow-none">
-                  <Upload className="h-4 w-4 mr-2" />
-                  导入
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>导入兑换卡</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid w-full max-w-sm items-center gap-1.5">
-                    <Label htmlFor="file">文件</Label>
-                    <Input 
-                      id="file" 
-                      type="file" 
-                      accept=".svg,.xlsx,.xls"
-                      className="cursor-pointer"
-                    />
-                  </div>
-                  
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <h4 className="text-sm font-medium mb-2">导入文件格式要求</h4>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      <li>• <strong>必须包含表头：</strong>卡片名称、卡号、积分数量</li>
-                      <li>• <strong>可选表头：</strong>备注（非必须字段）</li>
-                      <li>• <strong>支持格式：</strong>Excel文件（.xlsx, .xls）</li>
-                      <li>• <strong>积分数量：</strong>必须为正整数</li>
-                    </ul>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
-                    取消
-                  </Button>
-                  <Button type="submit">导入</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
             <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 border-0 shadow-none">
@@ -579,12 +804,7 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
                   <Button variant="outline" onClick={() => setIsExportDialogOpen(false)}>
                     取消
                   </Button>
-                  <Button onClick={() => {
-                    // 这里实现导出逻辑
-                    console.log('导出数据类型:', exportDataType)
-                    console.log('导出字段:', exportColumns)
-                    setIsExportDialogOpen(false)
-                  }}>
+                  <Button onClick={handleExportExchangeCards}>
                     导出
                   </Button>
                 </DialogFooter>
@@ -683,7 +903,7 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
                 <DialogHeader>
                   <DialogTitle>创建新兑换卡</DialogTitle>
                   <DialogDescription>
-                    创建一张新的兑换卡，用户可以使用卡号进行兑换。
+                    批量创建兑换卡，用户可以使用卡号进行兑换。
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -695,7 +915,14 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
                       id="name"
                       placeholder="输入卡片名称"
                       className="col-span-3"
+                      value={createCardForm.name}
+                      onChange={(e) => handleCreateCardFormChange('name', e.target.value)}
                     />
+                    {createCardErrors.name && (
+                      <div className="col-span-4 text-sm text-red-500 text-right">
+                        {createCardErrors.name}
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="points" className="text-right">
@@ -706,7 +933,14 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
                       type="number"
                       placeholder="输入积分数量"
                       className="col-span-3 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                      value={createCardForm.points}
+                      onChange={(e) => handleCreateCardFormChange('points', e.target.value)}
                     />
+                    {createCardErrors.points && (
+                      <div className="col-span-4 text-sm text-red-500 text-right">
+                        {createCardErrors.points}
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="description" className="text-right">
@@ -714,8 +948,10 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
                     </Label>
                     <Input
                       id="description"
-                      placeholder="输入卡片备注"
+                      placeholder="输入卡片备注（可选）"
                       className="col-span-3"
+                      value={createCardForm.description}
+                      onChange={(e) => handleCreateCardFormChange('description', e.target.value)}
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -726,15 +962,34 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
                       id="quantity"
                       type="number"
                       placeholder="输入创建数量"
-                      defaultValue="1"
                       min="1"
                       max="100"
                       className="col-span-3 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                      value={createCardForm.quantity}
+                      onChange={(e) => handleCreateCardFormChange('quantity', e.target.value)}
                     />
+                    {createCardErrors.quantity && (
+                      <div className="col-span-4 text-sm text-red-500 text-right">
+                        {createCardErrors.quantity}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">创建兑换卡</Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsCreateDialogOpen(false)}
+                    disabled={isCreatingCard}
+                  >
+                    取消
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    onClick={handleCreateCard}
+                    disabled={isCreatingCard}
+                  >
+                    {isCreatingCard ? '创建中...' : '创建兑换卡'}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -879,15 +1134,23 @@ export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
   }
 
   return (
+    <AdminLayout
+      currentPath={currentPage}
+      onPageChange={setCurrentPage}
+      headerActions={renderHeaderActions()}
+    >
+      {renderCurrentPage()}
+    </AdminLayout>
+  )
+}
+
+export function AdminApp({ initialPage = '/dashboard' }: AdminAppProps) {
+  return (
     <QueryClientProvider client={queryClient}>
       <AppSettingsProvider>
-        <AdminLayout
-          currentPath={currentPage}
-          onPageChange={setCurrentPage}
-          headerActions={renderHeaderActions()}
-        >
-          {renderCurrentPage()}
-        </AdminLayout>
+        <ExchangeCardsProvider>
+          <AdminAppInner initialPage={initialPage} />
+        </ExchangeCardsProvider>
       </AppSettingsProvider>
     </QueryClientProvider>
   )

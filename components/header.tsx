@@ -10,6 +10,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { generateAvatarUrl } from "@/lib/avatar-utils";
 import { UserDropdown } from "./user-dropdown";
+import { PointsExchangeDialog } from "./points-exchange-dialog";
 
 export function Header() {
   const pathname = usePathname();
@@ -24,6 +25,7 @@ export function Header() {
     avatar?: string;
     role?: string;
   } | null>(null);
+  const [isExchangeDialogOpen, setIsExchangeDialogOpen] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -143,7 +145,12 @@ export function Header() {
                     <span className="font-medium">{profile?.points || 0}</span>
                   </div>
                   <div className="mx-2 h-4 w-px bg-gray-400 dark:bg-white"></div>
-                  <Button variant="ghost" size="sm" className="h-auto p-1 text-sm hover:bg-transparent">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-auto p-1 text-sm hover:bg-transparent"
+                    onClick={() => setIsExchangeDialogOpen(true)}
+                  >
                     积分兑换
                   </Button>
                 </div>
@@ -165,6 +172,30 @@ export function Header() {
           {!user && <ThemeSwitcher />}
         </div>
       </div>
+      
+      {/* 积分兑换对话框 */}
+      {user && (
+        <PointsExchangeDialog
+          isOpen={isExchangeDialogOpen}
+          onClose={() => setIsExchangeDialogOpen(false)}
+          onSuccess={() => {
+            // 兑换成功后刷新用户积分
+            const refreshProfile = async () => {
+              const supabase = createClient();
+              const { data } = await supabase
+                .from('profiles')
+                .select('username, points, avatar, role')
+                .eq('id', user!.id)
+                .single();
+              if (data) {
+                setProfile(data);
+              }
+            };
+            refreshProfile();
+            setIsExchangeDialogOpen(false);
+          }}
+        />
+      )}
     </nav>
   );
 }

@@ -106,3 +106,153 @@ BEGIN
   RETURN v_log_id;
 END;
 $$;
+
+-- 获取积分变动日志列表函数（管理员专用）
+CREATE OR REPLACE FUNCTION get_points_logs_list(
+  p_limit INTEGER DEFAULT 50,
+  p_offset INTEGER DEFAULT 0,
+  p_search_term TEXT DEFAULT '',
+  p_action_filter TEXT DEFAULT 'all',
+  p_sort_field TEXT DEFAULT '创建时间',
+  p_sort_order TEXT DEFAULT 'desc'
+)
+RETURNS TABLE (
+  积分记录ID UUID,
+  用户ID UUID,
+  变动前积分 INTEGER,
+  积分变动量 INTEGER,
+  变动后积分 INTEGER,
+  变动类型 TEXT,
+  变动原因 TEXT,
+  兑换卡卡号 TEXT,
+  任务ID UUID,
+  操作人ID UUID,
+  创建时间 TIMESTAMP WITH TIME ZONE,
+  username TEXT,
+  user_email TEXT,
+  user_avatar TEXT,
+  operator_username TEXT,
+  operator_email TEXT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_sql TEXT;
+  v_where_conditions TEXT[] := ARRAY[]::TEXT[];
+  v_order_by TEXT;
+BEGIN
+  -- 检查是否为管理员
+  IF NOT EXISTS (
+    SELECT 1 FROM public."user-management" 
+    WHERE id = auth.uid() AND role = 'admin'
+  ) THEN
+    RAISE EXCEPTION '只有管理员可以查看积分变动日志列表';
+  END IF;
+  
+  -- 构建WHERE条件
+  IF p_search_term != '' THEN
+    v_where_conditions := array_append(v_where_conditions, 
+      format('(u.username ILIKE ''%%%s%%'' OR au.email ILIKE ''%%%s%%'' OR pl.变动原因 ILIKE ''%%%s%%'' OR pl.任务ID::TEXT ILIKE ''%%%s%%'')', 
+        p_search_term, p_search_term, p_search_term, p_search_term));
+  END IF;
+  
+  IF p_action_filter != 'all' THEN
+    v_where_conditions := array_append(v_where_conditions, 
+      format('pl.变动类型 = ''%s''', p_action_filter));
+  END IF;
+  
+  -- 构建ORDER BY子句
+  v_order_by := format('ORDER BY pl.%I %s', p_sort_field, 
+    CASE WHEN upper(p_sort_order) = 'DESC' THEN 'DESC' ELSE 'ASC' END);
+  
+  -- 构建完整SQL
+  v_sql := format('
+    SELECT 
+      pl.积分记录ID,
+      pl.用户ID,
+      pl.变动前积分,
+      pl.积分变动量,
+      pl.变动后积分,
+      pl.变动类型,
+      pl.变动原因,
+      pl.兑换卡卡号,
+      pl.任务ID,
+      pl.操作人ID,
+      pl.创建时间,
+      COALESCE(u.username, '''')::text as username,
+      COALESCE(au.email, '''')::text as user_email,
+      COALESCE(u.avatar, '''')::text as user_avatar,
+      COALESCE(op.username, '''')::text as operator_username,
+      COALESCE(aop.email, '''')::text as operator_email
+    FROM public."points_log" pl
+    LEFT JOIN public."user-management" u ON pl.用户ID = u.id
+    LEFT JOIN auth.users au ON pl.用户ID = au.id
+    LEFT JOIN public."user-management" op ON pl.操作人ID = op.id
+    LEFT JOIN auth.users aop ON pl.操作人ID = aop.id
+    %s
+    %s
+    LIMIT %s OFFSET %s',
+    CASE WHEN array_length(v_where_conditions, 1) > 0 
+         THEN 'WHERE ' || array_to_string(v_where_conditions, ' AND ') 
+         ELSE '' END,
+    v_order_by,
+    p_limit,
+    p_offset
+  );
+  
+  RETURN QUERY EXECUTE v_sql;
+END;
+$$;
+
+-- 获取积分变动日志总数函数（管理员专用）
+CREATE OR REPLACE FUNCTION get_points_logs_count(
+  p_search_term TEXT DEFAULT '',
+  p_action_filter TEXT DEFAULT 'all'
+)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_sql TEXT;
+  v_where_conditions TEXT[] := ARRAY[]::TEXT[];
+  v_count INTEGER;
+BEGIN
+  -- 检查是否为管理员
+  IF NOT EXISTS (
+    SELECT 1 FROM public."user-management" 
+    WHERE id = auth.uid() AND role = 'admin'
+  ) THEN
+    RAISE EXCEPTION '只有管理员可以查看积分变动日志总数';
+  END IF;
+  
+  -- 构建WHERE条件
+  IF p_search_term != '' THEN
+    v_where_conditions := array_append(v_where_conditions, 
+      format('(u.username ILIKE ''%%%s%%'' OR u.email ILIKE ''%%%s%%'' OR pl.变动原因 ILIKE ''%%%s%%'' OR pl.任务ID::TEXT ILIKE ''%%%s%%'')', 
+        p_search_term, p_search_term, p_search_term, p_search_term));
+  END IF;
+  
+  IF p_action_filter != 'all' THEN
+    v_where_conditions := array_append(v_where_conditions, 
+      format('pl.变动类型 = ''%s''', p_action_filter));
+  END IF;
+  
+  -- 构建完整SQL
+  v_sql := format('
+    SELECT COUNT(*)
+    FROM public."points_log" pl
+    LEFT JOIN public."user-management" u ON pl.用户ID = u.id
+    %s',
+    CASE WHEN array_length(v_where_conditions, 1) > 0 
+         THEN 'WHERE ' || array_to_string(v_where_conditions, ' AND ') 
+         ELSE '' END
+  );
+  
+  EXECUTE v_sql INTO v_count;
+  RETURN v_count;
+END;
+$$;
