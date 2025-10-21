@@ -67,35 +67,9 @@ export function Setting() {
   // Supabase 客户端
   const supabase = createClient()
 
-  // 模版管理状态
-  const [templates, setTemplates] = useState<TemplateData[]>([
-    {
-      id: 'template-1',
-      title: '基础功能',
-      description: '通用基础功能',
-      features: [
-        { id: 'feature1', name: '新用户注册', value: 0 }
-      ]
-    },
-    {
-      id: 'template-2', 
-      title: '测试数据',
-      description: '测试功能',
-      features: [
-        { id: 'feature1', name: '1', value: 0 },
-        { id: 'feature2', name: '2', value: 0 },
-        { id: 'feature3', name: '3', value: 0 }
-      ]
-    },
-    {
-      id: 'template-3',
-      title: '请输入名称',
-      description: '请输入备注',
-      features: [
-        { id: 'feature1', name: '请输入名称', value: 0 }
-      ]
-    }
-  ])
+  // 模版管理状态（功能设置）
+  const [templates, setTemplates] = useState<TemplateData[]>([])
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
 
   // 常用变量管理状态
   const [commonVariables, setCommonVariables] = useState<CommonVariableData[]>([
@@ -139,6 +113,82 @@ export function Setting() {
     }
   }, [supabase])
 
+  // 从数据库加载功能设置（app_config）
+  const loadAppConfig = useCallback(async () => {
+    try {
+      setIsLoadingTemplates(true)
+      console.log('开始调用 get_app_config_list RPC...')
+      const { data, error } = await supabase.rpc('get_app_config_list')
+      
+      console.log('RPC 调用结果:', { data, error })
+      
+      if (error) {
+        console.error('加载功能设置失败:', error)
+        console.error('错误详情:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        toast.error(`加载功能设置失败: ${error.message}`)
+        return
+      }
+
+      // 将数据库数据转换为模板格式
+      // 按分类分组，每个分类作为一个模板
+      const categoryMap = new Map<string, TemplateData>()
+      const features: Array<{id: string, name: string, value: number, parentId: string}> = []
+      
+      // 第一遍：处理所有分类
+      ;(data || []).forEach((item: Record<string, unknown>) => {
+        const categoryName = String(item.配置名称)
+        const parentId = item.parent_id
+        
+        // 如果是分类（parent_id 为 null）
+        if (!parentId) {
+          if (!categoryMap.has(categoryName)) {
+            categoryMap.set(categoryName, {
+              id: String(item.id),
+              title: categoryName,
+              description: String(item.备注 || ''),
+              features: [],
+              isNew: false
+            })
+          }
+        } else {
+          // 如果是功能项，先收集起来
+          features.push({
+            id: String(item.id),
+            name: categoryName,
+            value: Number(item.积分消耗 || 0),
+            parentId: String(parentId)
+          })
+        }
+      })
+      
+      // 第二遍：将功能项分配到对应的分类
+      features.forEach(feature => {
+        const parentCategory = Array.from(categoryMap.values()).find(cat => cat.id === feature.parentId)
+        if (parentCategory) {
+          parentCategory.features.push({
+            id: feature.id,
+            name: feature.name,
+            value: feature.value
+          })
+        } else {
+          console.warn(`找不到功能项 ${feature.name} 的父分类，parentId: ${feature.parentId}`)
+        }
+      })
+
+      setTemplates(Array.from(categoryMap.values()))
+    } catch (error) {
+      console.error('加载功能设置出错:', error)
+      toast.error('加载功能设置出错')
+    } finally {
+      setIsLoadingTemplates(false)
+    }
+  }, [supabase])
+
   // 从数据库加载常用变量
   const loadCommonVariables = useCallback(async () => {
     try {
@@ -174,7 +224,8 @@ export function Setting() {
   useEffect(() => {
     loadApiKeys()
     loadCommonVariables()
-  }, [loadApiKeys, loadCommonVariables])
+    loadAppConfig()
+  }, [loadApiKeys, loadCommonVariables, loadAppConfig])
 
   // API Key 管理函数
   const handleAddApiKey = () => {
@@ -205,8 +256,8 @@ export function Setting() {
 
         // 调用数据库函数保存新的 API Key
         const { error } = await supabase.rpc('upsert_api_key', {
-          p_name: title,
-          p_key: key,
+          p_name: title.trim(),
+          p_key: key.trim(),
           p_enabled: true
         })
 
@@ -242,8 +293,8 @@ export function Setting() {
         // 调用数据库函数更新现有的 API Key
         const { error } = await supabase.rpc('update_api_key_by_name', {
           p_original_name: currentApiKey.originalTitle || currentApiKey.title,
-          p_new_name: newTitle,
-          p_key: newKey,
+          p_new_name: newTitle.trim(),
+          p_key: newKey.trim(),
           p_enabled: currentApiKey.enabled ?? true
         })
 
@@ -317,7 +368,7 @@ export function Setting() {
     }
   }
 
-  // 模版管理函数
+  // 模版管理函数（功能设置）
   const handleAddTemplate = () => {
     const newTemplate: TemplateData = {
       id: `template-${Date.now()}`,
@@ -331,14 +382,235 @@ export function Setting() {
     setTemplates(prev => [...prev, newTemplate])
   }
 
-  const handleUpdateTemplate = (template: TemplateData) => {
-    setTemplates(prev => prev.map(item => 
-      item.id === template.id ? template : item
-    ))
+  const handleUpdateTemplate = async (template: TemplateData) => {
+    try {
+      // 如果是新的模板，需要保存到数据库
+      if (template.isNew) {
+        if (!template.title?.trim()) {
+          toast.error('分类名称不能为空')
+          return
+        }
+
+        // 首先创建分类
+        const { data: categoryData, error: categoryError } = await supabase.rpc('upsert_app_config', {
+          p_配置名称: template.title.trim(),
+          p_配置类型: 'category',
+          p_积分消耗: 0,
+          p_parent_id: null,
+          p_备注: (template.description || '').trim()
+        })
+
+        if (categoryError) {
+          console.error('保存分类失败:', categoryError)
+          toast.error('保存分类失败: ' + categoryError.message)
+          return
+        }
+
+        // 然后创建功能项
+        for (const feature of template.features) {
+          if (feature.name?.trim()) {
+            const { error: featureError } = await supabase.rpc('upsert_app_config', {
+              p_配置名称: feature.name.trim(),
+              p_配置类型: 'function',
+              p_积分消耗: feature.value || 0,
+              p_parent_id: categoryData,
+              p_备注: ''
+            })
+
+            if (featureError) {
+              console.error('保存功能项失败:', featureError)
+              toast.error('保存功能项失败: ' + featureError.message)
+              return
+            }
+          }
+        }
+
+        toast.success('功能设置保存成功')
+        // 重新加载数据
+        await loadAppConfig()
+      } else {
+        // 更新现有的模板
+        if (!template.title?.trim()) {
+          toast.error('分类名称不能为空')
+          return
+        }
+
+        // 检查是否是新模板（ID 以 'template' 开头）
+        const isNewTemplate = template.id.startsWith('template')
+        let categoryId: string
+
+        if (isNewTemplate) {
+          // 新模板：先创建分类
+          console.log('准备创建新分类，参数:', {
+            p_配置名称: template.title,
+            p_配置类型: 'category',
+            p_积分消耗: 0,
+            p_parent_id: null,
+            p_备注: template.description || ''
+          })
+          
+          const { data: categoryData, error: categoryError } = await supabase.rpc('upsert_app_config', {
+            p_配置名称: template.title.trim(),
+            p_配置类型: 'category',
+            p_积分消耗: 0,
+            p_parent_id: null,
+            p_备注: (template.description || '').trim()
+          })
+
+          if (categoryError) {
+            console.error('创建分类失败:', categoryError)
+            console.error('错误类型:', typeof categoryError)
+            console.error('错误字符串化:', JSON.stringify(categoryError, null, 2))
+            
+            let errorMessage = '未知错误'
+            if (typeof categoryError === 'string') {
+              errorMessage = categoryError
+            } else if (categoryError && typeof categoryError === 'object') {
+              errorMessage = categoryError.message || 
+                            categoryError.details || 
+                            categoryError.hint || 
+                            JSON.stringify(categoryError)
+            }
+            
+            toast.error('创建分类失败: ' + errorMessage)
+            return
+          }
+          
+          categoryId = categoryData
+          console.log('分类创建成功，返回ID:', categoryId)
+        } else {
+          // 现有模板：更新分类
+          console.log('准备更新分类，参数:', {
+            config_id: template.id,
+            p_配置名称: template.title,
+            p_配置类型: 'category',
+            p_积分消耗: 0,
+            p_parent_id: null,
+            p_备注: template.description || ''
+          })
+          
+          const { error: categoryError } = await supabase.rpc('upsert_app_config', {
+            config_id: template.id,
+            p_配置名称: template.title.trim(),
+            p_配置类型: 'category',
+            p_积分消耗: 0,
+            p_parent_id: null,
+            p_备注: (template.description || '').trim()
+          })
+
+          if (categoryError) {
+            console.error('更新分类失败:', categoryError)
+            console.error('错误类型:', typeof categoryError)
+            console.error('错误字符串化:', JSON.stringify(categoryError, null, 2))
+            
+            let errorMessage = '未知错误'
+            if (typeof categoryError === 'string') {
+              errorMessage = categoryError
+            } else if (categoryError && typeof categoryError === 'object') {
+              errorMessage = categoryError.message || 
+                            categoryError.details || 
+                            categoryError.hint || 
+                            JSON.stringify(categoryError)
+            }
+            
+            toast.error('更新分类失败: ' + errorMessage)
+            return
+          }
+          
+          categoryId = template.id // 对于现有模板，使用原有的 ID
+          console.log('分类更新成功，使用ID:', categoryId)
+        }
+
+        // 获取现有的功能项
+        const { error: getFunctionsError } = await supabase.rpc('get_functions_by_category', {
+          category_name: template.title
+        })
+
+        if (getFunctionsError) {
+          console.error('获取现有功能项失败:', getFunctionsError)
+        }
+
+        // 更新或创建功能项
+        for (const feature of template.features) {
+          if (feature.name?.trim()) {
+            const isNewFeature = feature.id.startsWith('feature')
+            const featureParams = {
+              config_id: isNewFeature ? null : feature.id,
+              p_配置名称: feature.name.trim(),
+              p_配置类型: 'function',
+              p_积分消耗: feature.value || 0,
+              p_parent_id: categoryId, // 使用正确的 categoryId
+              p_备注: ''
+            }
+            
+            console.log(`准备${isNewFeature ? '创建' : '更新'}功能项，参数:`, featureParams)
+            
+            const { data: featureData, error: featureError } = await supabase.rpc('upsert_app_config', featureParams)
+
+            if (featureError) {
+              console.error('更新功能项失败:', featureError)
+              console.error('错误类型:', typeof featureError)
+              console.error('错误字符串化:', JSON.stringify(featureError, null, 2))
+              
+              // 尝试不同的错误信息提取方式
+              let errorMessage = '未知错误'
+              if (typeof featureError === 'string') {
+                errorMessage = featureError
+              } else if (featureError && typeof featureError === 'object') {
+                errorMessage = featureError.message || 
+                              featureError.details || 
+                              featureError.hint || 
+                              JSON.stringify(featureError)
+              }
+              
+              toast.error('更新功能项失败: ' + errorMessage)
+              return
+            }
+            
+            console.log(`功能项${isNewFeature ? '创建' : '更新'}成功，返回数据:`, featureData)
+          }
+        }
+
+        toast.success('功能设置更新成功')
+        // 重新加载数据
+        await loadAppConfig()
+      }
+    } catch (error) {
+      console.error('更新功能设置出错:', error)
+      toast.error('更新功能设置出错')
+    }
   }
 
-  const handleDeleteTemplate = (id: string) => {
-    setTemplates(prev => prev.filter(item => item.id !== id))
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      const template = templates.find(item => item.id === id)
+      
+      if (template?.isNew) {
+        // 如果是新建的还未保存的模板，直接从状态中移除
+        setTemplates(prev => prev.filter(item => item.id !== id))
+        return
+      }
+
+      if (template) {
+        // 调用数据库函数删除分类（会级联删除相关功能项）
+        const { error } = await supabase.rpc('delete_app_config', {
+          config_id: template.id
+        })
+
+        if (error) {
+          console.error('删除功能设置失败:', error)
+          toast.error('删除功能设置失败: ' + error.message)
+          return
+        }
+
+        toast.success('功能设置删除成功')
+        // 重新加载数据
+        await loadAppConfig()
+      }
+    } catch (error) {
+      console.error('删除功能设置出错:', error)
+      toast.error('删除功能设置出错')
+    }
   }
 
   // 常用变量管理函数
@@ -368,8 +640,8 @@ export function Setting() {
 
         // 调用数据库函数保存新的常用变量
         const { error } = await supabase.rpc('upsert_variable', {
-          p_name: title,
-          p_value: value,
+          p_name: title.trim(),
+          p_value: value.trim(),
           p_enabled: true
         })
 
@@ -405,8 +677,8 @@ export function Setting() {
         // 调用数据库函数更新现有的常用变量
         const { error } = await supabase.rpc('update_variable_by_name', {
           p_original_name: currentVariable.originalTitle || currentVariable.title,
-          p_new_name: newTitle,
-          p_value: newValue,
+          p_new_name: newTitle.trim(),
+          p_value: newValue.trim(),
           p_enabled: currentVariable.enabled ?? true
         })
 
@@ -856,26 +1128,45 @@ export function Setting() {
         )
 
       case 'deduction':
-        const templateCards = [
-          ...templates.map((template) => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              onUpdate={handleUpdateTemplate}
-              onDelete={handleDeleteTemplate}
-            />
-          )),
-          <AddTemplateCard key="add-template" onClick={handleAddTemplate} />
-        ]
-        
         return (
-          <MasonryLayout
-            columns={{ default: 1, md: 2, lg: 4 }}
-            gap={16}
-            className="w-full"
-          >
-            {templateCards}
-          </MasonryLayout>
+          <div className="space-y-6">
+            {/* 功能设置卡片列表 */}
+            {!isLoadingTemplates && (
+              <MasonryLayout
+                columns={{ default: 1, md: 2, lg: 4 }}
+                gap={16}
+                className="w-full"
+              >
+                {templates.map((template) => (
+                  <TemplateCard
+                    key={template.id}
+                    template={template}
+                    onUpdate={handleUpdateTemplate}
+                    onDelete={handleDeleteTemplate}
+                  />
+                ))}
+                <AddTemplateCard key="add-template" onClick={handleAddTemplate} />
+              </MasonryLayout>
+            )}
+
+            {/* 加载状态 */}
+            {isLoadingTemplates && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground text-sm">
+                  正在加载功能设置...
+                </p>
+              </div>
+            )}
+
+            {/* 空状态 */}
+            {!isLoadingTemplates && templates.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground text-sm">
+                  还没有添加任何功能设置，点击上方卡片开始添加
+                </p>
+              </div>
+            )}
+          </div>
         )
 
       case 'cleanup':
