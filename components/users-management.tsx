@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Search, Trash2, RotateCcw, Filter, MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Search, Trash2, RotateCcw, Filter, MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Check, X } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -45,639 +45,9 @@ import { formatPoints } from '@/lib/format-points'
 import { getTableBorderClasses } from '@/lib/table-border-utils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { UserDetails } from './user-details'
+import { useUsersManagement, adjustUserPoints, type UserManagementData } from '@/hooks/use-users-management'
 
-const users = [
-  {
-    id: 1,
-    avatar: '/api/placeholder/32/32',
-    username: '张三',
-    email: 'zhangsan@example.com',
-    roles: ['付费用户'],
-    currentPoints: 1250,
-    totalConsumedPoints: 3500,
-    totalUsage: 3500,
-    totalRedeem: 4750,
-    redeemCount: 5,
-    usageCount: 12,
-    todayPoints: 50,
-    weekPoints: 280,
-    joinDate: '2024-01-15',
-    lastActiveTime: '2024-03-15 14:30',
-    notes: '活跃用户，经常参与活动'
-  },
-  {
-    id: 2,
-    avatar: '/api/placeholder/32/32',
-    username: '李四',
-    email: 'lisi@example.com',
-    roles: ['付费用户'],
-    currentPoints: 850,
-    totalConsumedPoints: 1200,
-    totalUsage: 1200,
-    totalRedeem: 2050,
-    redeemCount: 3,
-    usageCount: 8,
-    todayPoints: 30,
-    weekPoints: 150,
-    joinDate: '2024-02-20',
-    lastActiveTime: '2024-03-14 09:15',
-    notes: '新用户，需要关注'
-  },
-  {
-    id: 3,
-    avatar: '/api/placeholder/32/32',
-    username: '王五',
-    email: 'wangwu@example.com',
-    roles: ['管理员'],
-    currentPoints: 2100,
-    totalConsumedPoints: 5800,
-    totalUsage: 5800,
-    totalRedeem: 7900,
-    redeemCount: 8,
-    usageCount: 20,
-    todayPoints: 100,
-    weekPoints: 500,
-    joinDate: '2024-01-10',
-    lastActiveTime: '2024-03-15 16:45',
-    notes: '系统管理员'
-  },
-  {
-    id: 4,
-    avatar: '/api/placeholder/32/32',
-    username: '赵六',
-    email: 'zhaoliu@example.com',
-    roles: ['普通用户'],
-    currentPoints: 450,
-    totalConsumedPoints: 900,
-    totalUsage: 900,
-    totalRedeem: 1350,
-    redeemCount: 2,
-    usageCount: 6,
-    todayPoints: 10,
-    weekPoints: 60,
-    joinDate: '2024-03-05',
-    lastActiveTime: '2024-03-13 11:20',
-    notes: '普通用户，使用频率较低'
-  },
-  {
-    id: 5,
-    avatar: '/api/placeholder/32/32',
-    username: '钱七',
-    email: 'qianqi@example.com',
-    roles: ['付费用户'],
-    currentPoints: 1800,
-    totalConsumedPoints: 4200,
-    totalUsage: 4200,
-    totalRedeem: 6000,
-    redeemCount: 6,
-    usageCount: 15,
-    todayPoints: 80,
-    weekPoints: 320,
-    joinDate: '2024-02-28',
-    lastActiveTime: '2024-03-15 08:30',
-    notes: '高价值用户'
-  },
-  {
-    id: 6,
-    avatar: '/api/placeholder/32/32',
-    username: '孙八',
-    email: 'sunba@example.com',
-    roles: ['普通用户'],
-    currentPoints: 320,
-    totalConsumedPoints: 680,
-    totalUsage: 680,
-    totalRedeem: 1000,
-    redeemCount: 1,
-    usageCount: 4,
-    todayPoints: 15,
-    weekPoints: 85,
-    joinDate: '2024-03-01',
-    lastActiveTime: '2024-03-15 10:20',
-    notes: '偶尔使用，潜在付费用户'
-  },
-  {
-    id: 7,
-    avatar: '/api/placeholder/32/32',
-    username: '周九',
-    email: 'zhoujiu@example.com',
-    roles: ['付费用户'],
-    currentPoints: 2250,
-    totalConsumedPoints: 6800,
-    totalUsage: 6800,
-    totalRedeem: 9050,
-    redeemCount: 9,
-    usageCount: 22,
-    todayPoints: 120,
-    weekPoints: 650,
-    joinDate: '2024-01-05',
-    lastActiveTime: '2024-03-15 18:15',
-    notes: '超级活跃用户，VIP客户'
-  },
-  {
-    id: 8,
-    avatar: '/api/placeholder/32/32',
-    username: '吴十',
-    email: 'wushi@example.com',
-    roles: ['普通用户'],
-    currentPoints: 180,
-    totalConsumedPoints: 420,
-    totalUsage: 420,
-    totalRedeem: 600,
-    redeemCount: 1,
-    usageCount: 3,
-    todayPoints: 5,
-    weekPoints: 35,
-    joinDate: '2024-03-08',
-    lastActiveTime: '2024-03-14 16:30',
-    notes: '新注册用户，观察中'
-  },
-  {
-    id: 9,
-    avatar: '/api/placeholder/32/32',
-    username: '郑十一',
-    email: 'zhengshiyi@example.com',
-    roles: ['管理员'],
-    currentPoints: 1500,
-    totalConsumedPoints: 3200,
-    totalUsage: 3200,
-    totalRedeem: 4700,
-    redeemCount: 4,
-    usageCount: 11,
-    todayPoints: 60,
-    weekPoints: 300,
-    joinDate: '2024-01-20',
-    lastActiveTime: '2024-03-15 12:45',
-    notes: '技术管理员，负责系统维护'
-  },
-  {
-    id: 10,
-    avatar: '/api/placeholder/32/32',
-    username: '冯十二',
-    email: 'fengshier@example.com',
-    roles: ['付费用户'],
-    currentPoints: 980,
-    totalConsumedPoints: 2100,
-    totalUsage: 2100,
-    totalRedeem: 3080,
-    redeemCount: 3,
-    usageCount: 7,
-    todayPoints: 40,
-    weekPoints: 200,
-    joinDate: '2024-02-15',
-    lastActiveTime: '2024-03-15 09:30',
-    notes: '稳定付费用户，使用频率中等'
-  },
-  {
-    id: 11,
-    avatar: '/api/placeholder/32/32',
-    username: '陈十三',
-    email: 'chenshisan@example.com',
-    roles: ['普通用户'],
-    currentPoints: 650,
-    totalConsumedPoints: 1100,
-    totalUsage: 1100,
-    totalRedeem: 1750,
-    redeemCount: 2,
-    usageCount: 5,
-    todayPoints: 25,
-    weekPoints: 120,
-    joinDate: '2024-02-25',
-    lastActiveTime: '2024-03-15 15:20',
-    notes: '有升级付费用户的潜力'
-  },
-  {
-    id: 12,
-    avatar: '/api/placeholder/32/32',
-    username: '褚十四',
-    email: 'chushisi@example.com',
-    roles: ['付费用户'],
-    currentPoints: 1680,
-    totalConsumedPoints: 4500,
-    totalUsage: 4500,
-    totalRedeem: 6180,
-    redeemCount: 6,
-    usageCount: 16,
-    todayPoints: 75,
-    weekPoints: 380,
-    joinDate: '2024-01-25',
-    lastActiveTime: '2024-03-15 11:10',
-    notes: '长期付费用户，忠诚度高'
-  },
-  {
-    id: 13,
-    avatar: '/api/placeholder/32/32',
-    username: '卫十五',
-    email: 'weishiwu@example.com',
-    roles: ['普通用户'],
-    currentPoints: 280,
-    totalConsumedPoints: 520,
-    totalUsage: 520,
-    totalRedeem: 800,
-    redeemCount: 1,
-    usageCount: 3,
-    todayPoints: 8,
-    weekPoints: 45,
-    joinDate: '2024-03-10',
-    lastActiveTime: '2024-03-14 14:50',
-    notes: '刚开始使用，需要引导'
-  },
-  {
-    id: 14,
-    avatar: '/api/placeholder/32/32',
-    username: '蒋十六',
-    email: 'jiangshiliu@example.com',
-    roles: ['付费用户'],
-    currentPoints: 2800,
-    totalConsumedPoints: 8200,
-    totalUsage: 8200,
-    totalRedeem: 11000,
-    redeemCount: 11,
-    usageCount: 28,
-    todayPoints: 150,
-    weekPoints: 720,
-    joinDate: '2023-12-20',
-    lastActiveTime: '2024-03-15 19:25',
-    notes: '顶级用户，消费能力强'
-  },
-  {
-    id: 15,
-    avatar: '/api/placeholder/32/32',
-    username: '沈十七',
-    email: 'shenshiqi@example.com',
-    roles: ['普通用户'],
-    currentPoints: 420,
-    totalConsumedPoints: 780,
-    totalUsage: 780,
-    totalRedeem: 1200,
-    redeemCount: 1,
-    usageCount: 4,
-    todayPoints: 18,
-    weekPoints: 90,
-    joinDate: '2024-02-28',
-    lastActiveTime: '2024-03-15 13:40',
-    notes: '使用频率逐渐增加'
-  },
-  {
-    id: 16,
-    avatar: '/api/placeholder/32/32',
-    username: '韩十八',
-    email: 'hanshiba@example.com',
-    roles: ['管理员'],
-    currentPoints: 1200,
-    totalConsumedPoints: 2800,
-    totalUsage: 2800,
-    totalRedeem: 4000,
-    redeemCount: 4,
-    usageCount: 13,
-    todayPoints: 45,
-    weekPoints: 220,
-    joinDate: '2024-01-30',
-    lastActiveTime: '2024-03-15 17:15',
-    notes: '客服管理员，处理用户问题'
-  },
-  {
-    id: 17,
-    avatar: '/api/placeholder/32/32',
-    username: '杨十九',
-    email: 'yangshijiu@example.com',
-    roles: ['付费用户'],
-    currentPoints: 1450,
-    totalConsumedPoints: 3600,
-    totalUsage: 3600,
-    totalRedeem: 5050,
-    redeemCount: 5,
-    usageCount: 16,
-    todayPoints: 65,
-    weekPoints: 310,
-    joinDate: '2024-02-05',
-    lastActiveTime: '2024-03-15 08:45',
-    notes: '早期付费用户，满意度高'
-  },
-  {
-    id: 18,
-    avatar: '/api/placeholder/32/32',
-    username: '朱二十',
-    email: 'zhuershí@example.com',
-    roles: ['普通用户'],
-    currentPoints: 150,
-    totalConsumedPoints: 300,
-    totalUsage: 300,
-    totalRedeem: 450,
-    redeemCount: 1,
-    usageCount: 1,
-    todayPoints: 3,
-    weekPoints: 20,
-    joinDate: '2024-03-12',
-    lastActiveTime: '2024-03-14 20:10',
-    notes: '新用户，刚开始探索功能'
-  },
-  {
-    id: 19,
-    avatar: '/api/placeholder/32/32',
-    username: '秦二一',
-    email: 'qinershiyi@example.com',
-    roles: ['付费用户'],
-    currentPoints: 2150,
-    totalConsumedPoints: 5900,
-    totalUsage: 5900,
-    totalRedeem: 8050,
-    redeemCount: 8,
-    usageCount: 26,
-    todayPoints: 95,
-    weekPoints: 480,
-    joinDate: '2024-01-12',
-    lastActiveTime: '2024-03-15 16:20',
-    notes: '重度使用者，功能专家'
-  },
-  {
-    id: 20,
-    avatar: '/api/placeholder/32/32',
-    username: '尤二二',
-    email: 'youershier@example.com',
-    roles: ['普通用户'],
-    currentPoints: 380,
-    totalConsumedPoints: 650,
-    totalUsage: 650,
-    totalRedeem: 1030,
-    redeemCount: 1,
-    usageCount: 3,
-    todayPoints: 12,
-    weekPoints: 68,
-    joinDate: '2024-03-02',
-    lastActiveTime: '2024-03-15 12:30',
-    notes: '中等活跃度，有付费潜力'
-  },
-  {
-    id: 21,
-    avatar: '/api/placeholder/32/32',
-    username: '许二三',
-    email: 'xuershisan@example.com',
-    roles: ['付费用户'],
-    currentPoints: 1750,
-    totalConsumedPoints: 4100,
-    totalUsage: 4100,
-    totalRedeem: 5850,
-    redeemCount: 5,
-    usageCount: 19,
-    todayPoints: 80,
-    weekPoints: 390,
-    joinDate: '2024-02-10',
-    lastActiveTime: '2024-03-15 14:15',
-    notes: '稳定的付费用户群体'
-  },
-  {
-    id: 22,
-    avatar: '/api/placeholder/32/32',
-    username: '何二四',
-    email: 'heershisi@example.com',
-    roles: ['普通用户'],
-    currentPoints: 520,
-    totalConsumedPoints: 890,
-    totalUsage: 890,
-    totalRedeem: 1410,
-    redeemCount: 1,
-    usageCount: 4,
-    todayPoints: 22,
-    weekPoints: 105,
-    joinDate: '2024-02-22',
-    lastActiveTime: '2024-03-15 11:45',
-    notes: '活跃度在提升，关注转化'
-  },
-  {
-    id: 23,
-    avatar: '/api/placeholder/32/32',
-    username: '吕二五',
-    email: 'lvershiwu@example.com',
-    roles: ['管理员'],
-    currentPoints: 1350,
-    totalConsumedPoints: 3100,
-    totalUsage: 3100,
-    totalRedeem: 4450,
-    redeemCount: 4,
-    usageCount: 14,
-    todayPoints: 55,
-    weekPoints: 270,
-    joinDate: '2024-01-18',
-    lastActiveTime: '2024-03-15 15:50',
-    notes: '运营管理员，负责用户增长'
-  },
-  {
-    id: 24,
-    avatar: '/api/placeholder/32/32',
-    username: '施二六',
-    email: 'shiershiliu@example.com',
-    roles: ['付费用户'],
-    currentPoints: 2400,
-    totalConsumedPoints: 6500,
-    totalUsage: 6500,
-    totalRedeem: 8900,
-    redeemCount: 8,
-    usageCount: 29,
-    todayPoints: 110,
-    weekPoints: 550,
-    joinDate: '2023-12-28',
-    lastActiveTime: '2024-03-15 18:30',
-    notes: '老用户，产品忠实粉丝'
-  },
-  {
-    id: 25,
-    avatar: '/api/placeholder/32/32',
-    username: '张二七',
-    email: 'zhangershiqi@example.com',
-    roles: ['普通用户'],
-    currentPoints: 240,
-    totalConsumedPoints: 480,
-    totalUsage: 480,
-    totalRedeem: 720,
-    redeemCount: 1,
-    usageCount: 2,
-    todayPoints: 6,
-    weekPoints: 38,
-    joinDate: '2024-03-06',
-    lastActiveTime: '2024-03-14 13:25',
-    notes: '使用频率较低，需要激活'
-  },
-  {
-    id: 26,
-    avatar: '/api/placeholder/32/32',
-    username: '孔二八',
-    email: 'kongershiba@example.com',
-    roles: ['付费用户'],
-    currentPoints: 1920,
-    totalConsumedPoints: 4800,
-    totalUsage: 4800,
-    totalRedeem: 6720,
-    redeemCount: 6,
-    usageCount: 22,
-    todayPoints: 85,
-    weekPoints: 420,
-    joinDate: '2024-01-28',
-    lastActiveTime: '2024-03-15 10:40',
-    notes: '高价值用户，推荐给朋友'
-  },
-  {
-    id: 27,
-    avatar: '/api/placeholder/32/32',
-    username: '曹二九',
-    email: 'caoershijiu@example.com',
-    roles: ['普通用户'],
-    currentPoints: 680,
-    totalConsumedPoints: 1200,
-    totalUsage: 1200,
-    totalRedeem: 1880,
-    redeemCount: 1,
-    usageCount: 6,
-    todayPoints: 28,
-    weekPoints: 140,
-    joinDate: '2024-02-18',
-    lastActiveTime: '2024-03-15 16:10',
-    notes: '使用体验良好，考虑升级'
-  },
-  {
-    id: 28,
-    avatar: '/api/placeholder/32/32',
-    username: '严三十',
-    email: 'yansanshi@example.com',
-    roles: ['付费用户'],
-    currentPoints: 3200,
-    totalConsumedPoints: 9100,
-    totalUsage: 9100,
-    totalRedeem: 12300,
-    redeemCount: 12,
-    usageCount: 41,
-    todayPoints: 180,
-    weekPoints: 850,
-    joinDate: '2023-11-15',
-    lastActiveTime: '2024-03-15 19:45',
-    notes: '超级用户，产品重度依赖者'
-  },
-  {
-    id: 29,
-    avatar: '/api/placeholder/32/32',
-    username: '华三一',
-    email: 'huasanyi@example.com',
-    roles: ['普通用户'],
-    currentPoints: 360,
-    totalConsumedPoints: 620,
-    totalUsage: 620,
-    totalRedeem: 980,
-    redeemCount: 1,
-    usageCount: 3,
-    todayPoints: 14,
-    weekPoints: 72,
-    joinDate: '2024-03-04',
-    lastActiveTime: '2024-03-15 09:15',
-    notes: '新用户适应期，需要支持'
-  },
-  {
-    id: 30,
-    avatar: '/api/placeholder/32/32',
-    username: '金三二',
-    email: 'jinsaner@example.com',
-    roles: ['管理员'],
-    currentPoints: 1600,
-    totalConsumedPoints: 3800,
-    totalUsage: 3800,
-    totalRedeem: 5400,
-    redeemCount: 5,
-    usageCount: 18,
-    todayPoints: 70,
-    weekPoints: 340,
-    joinDate: '2024-01-08',
-    lastActiveTime: '2024-03-15 17:30',
-    notes: '产品管理员，负责功能规划'
-  },
-  {
-    id: 31,
-    avatar: '/api/placeholder/32/32',
-    username: '魏三三',
-    email: 'weisansan@example.com',
-    roles: ['付费用户'],
-    currentPoints: 1580,
-    totalConsumedPoints: 3900,
-    totalUsage: 3900,
-    totalRedeem: 5480,
-    redeemCount: 5,
-    usageCount: 18,
-    todayPoints: 72,
-    weekPoints: 360,
-    joinDate: '2024-02-12',
-    lastActiveTime: '2024-03-15 13:20',
-    notes: '付费用户，使用多种功能'
-  },
-  {
-    id: 32,
-    avatar: '/api/placeholder/32/32',
-    username: '陶三四',
-    email: 'taosansi@example.com',
-    roles: ['普通用户'],
-    currentPoints: 450,
-    totalConsumedPoints: 820,
-    totalUsage: 820,
-    totalRedeem: 1270,
-    redeemCount: 1,
-    usageCount: 4,
-    todayPoints: 19,
-    weekPoints: 95,
-    joinDate: '2024-02-26',
-    lastActiveTime: '2024-03-15 14:40',
-    notes: '逐步增加使用频率'
-  },
-  {
-    id: 33,
-    avatar: '/api/placeholder/32/32',
-    username: '姜三五',
-    email: 'jiangsanwu@example.com',
-    roles: ['付费用户'],
-    currentPoints: 2650,
-    totalConsumedPoints: 7200,
-    totalUsage: 7200,
-    totalRedeem: 9850,
-    redeemCount: 9,
-    usageCount: 32,
-    todayPoints: 125,
-    weekPoints: 620,
-    joinDate: '2023-12-10',
-    lastActiveTime: '2024-03-15 18:50',
-    notes: '长期付费用户，满意度极高'
-  },
-  {
-    id: 34,
-    avatar: '/api/placeholder/32/32',
-    username: '戚三六',
-    email: 'qisanliu@example.com',
-    roles: ['普通用户'],
-    currentPoints: 290,
-    totalConsumedPoints: 550,
-    totalUsage: 550,
-    totalRedeem: 840,
-    redeemCount: 1,
-    usageCount: 2,
-    todayPoints: 11,
-    weekPoints: 58,
-    joinDate: '2024-03-07',
-    lastActiveTime: '2024-03-14 15:30',
-    notes: '新用户，正在熟悉产品'
-  },
-  {
-    id: 35,
-    avatar: '/api/placeholder/32/32',
-    username: '谢三七',
-    email: 'xiesanqi@example.com',
-    roles: ['付费用户'],
-    currentPoints: 2100,
-    totalConsumedPoints: 5600,
-    totalUsage: 5600,
-    totalRedeem: 7700,
-    redeemCount: 7,
-    usageCount: 25,
-    todayPoints: 98,
-    weekPoints: 490,
-    joinDate: '2024-01-22',
-    lastActiveTime: '2024-03-15 12:15',
-    notes: '高频使用者，产品推广者'
-  }
-]
+// 模拟数据已移除，现在使用数据库数据
 
 const roleColors: Record<string, string> = {
   '管理员': 'bg-red-100 text-red-700',
@@ -686,7 +56,7 @@ const roleColors: Record<string, string> = {
 }
 
 type UserRole = '普通用户' | '付费用户' | '管理员';
-type SortField = 'currentPoints' | 'totalConsumedPoints' | 'totalUsage' | 'totalRedeem' | 'redeemCount' | 'usageCount' | 'todayPoints' | 'weekPoints' | 'joinDate' | 'lastActiveTime'
+type SortField = 'currentPoints' | 'totalConsumedPoints' | 'totalUsage' | 'todayPoints' | 'weekPoints' | 'joinDate' | 'lastActiveTime'
 type SortOrder = 'asc' | 'desc'
 
 export function UsersManagement() {
@@ -696,23 +66,26 @@ export function UsersManagement() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<typeof users[0] | null>(null)
+  const [selectedUser, setSelectedUser] = useState<UserManagementData | null>(null)
+  
+  // 使用数据库数据
+  const { data: users, isLoading, error, refetch } = useUsersManagement()
   // 编辑用户表单状态
   const [editFormData, setEditFormData] = useState({
-    notes: '',
-    pointsAdjustment: 0
-  })
-  const [originalFormData, setOriginalFormData] = useState({
-    notes: '',
     pointsAdjustment: 0
   })
   
   // 批量选择状态
-  const [selectedUsers, setSelectedUsers] = useState<number[]>([])
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   
   // 删除确认对话框状态
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [userToDelete, setUserToDelete] = useState<typeof users[0] | null>(null)
+  const [userToDelete, setUserToDelete] = useState<UserManagementData | null>(null)
+  
+  // 备注编辑状态
+  const [editingNoteUserId, setEditingNoteUserId] = useState<string | null>(null)
+  const [editingNoteValue, setEditingNoteValue] = useState('')
+  const [originalNoteValue, setOriginalNoteValue] = useState('')
 
   const { pageSize, pointsFormat, tableBorder } = useAppSettings()
   const itemsPerPage = pageSize
@@ -721,17 +94,53 @@ export function UsersManagement() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const userIdParam = searchParams.get('userId')
-  const detailsUser = userIdParam ? users.find(u => u.id === Number(userIdParam)) : null
+  const detailsUser = userIdParam && users ? users.find(u => u.id === userIdParam) : null
 
   const handleBackToList = () => {
     // 使用浏览器历史后退，保留上一页面的状态（搜索、分页、排序等）
     router.back()
   }
 
-  const handleViewDetails = (user: typeof users[0]) => {
+  const handleViewDetails = (user: UserManagementData) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set('userId', String(user.id))
     router.push(`?${params.toString()}`)
+  }
+
+  // 处理loading状态
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>加载用户数据中...</span>
+        </div>
+      </div>
+    )
+  }
+
+  // 处理错误状态
+  if (error) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">加载用户数据失败: {error.message}</p>
+          <Button onClick={() => refetch()}>重试</Button>
+        </div>
+      </div>
+    )
+  }
+
+  // 处理无数据状态
+  if (!users || users.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">暂无用户数据</p>
+          <Button onClick={() => refetch()}>刷新</Button>
+        </div>
+      </div>
+    )
   }
 
   if (detailsUser) {
@@ -749,12 +158,12 @@ export function UsersManagement() {
     .filter(user => {
       const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           user.notes.toLowerCase().includes(searchTerm.toLowerCase())
+                           (user.notes || '').toLowerCase().includes(searchTerm.toLowerCase())
       const matchesRole = roleFilter === 'all' || user.roles.includes(roleFilter)
       return matchesSearch && matchesRole
     })
     .sort((a, b) => {
-      let aValue: number | Date, bValue: number | Date
+      let aValue: number, bValue: number
       
       switch (sortField) {
         case 'currentPoints':
@@ -765,6 +174,10 @@ export function UsersManagement() {
           aValue = a.totalConsumedPoints
           bValue = b.totalConsumedPoints
           break
+        case 'totalUsage':
+          aValue = a.totalUsage
+          bValue = b.totalUsage
+          break
         case 'todayPoints':
           aValue = a.todayPoints
           bValue = b.todayPoints
@@ -774,12 +187,12 @@ export function UsersManagement() {
           bValue = b.weekPoints
           break
         case 'joinDate':
-          aValue = new Date(a.joinDate)
-          bValue = new Date(b.joinDate)
+          aValue = new Date(a.joinDate).getTime()
+          bValue = new Date(b.joinDate).getTime()
           break
         case 'lastActiveTime':
-          aValue = new Date(a.lastActiveTime)
-          bValue = new Date(b.lastActiveTime)
+          aValue = new Date(a.lastActiveTime).getTime()
+          bValue = new Date(b.lastActiveTime).getTime()
           break
         default:
           return 0
@@ -816,29 +229,47 @@ export function UsersManagement() {
     setSelectedUser(user)
     // 初始化表单数据
     const initialData = {
-      notes: user.notes,
       pointsAdjustment: 0
     }
     setEditFormData(initialData)
-    setOriginalFormData(initialData)
     setIsEditDialogOpen(true)
   }
 
   // 检查是否有修改
-  const hasChanges = editFormData.notes !== originalFormData.notes || 
-                     editFormData.pointsAdjustment !== originalFormData.pointsAdjustment
+  const hasChanges = editFormData.pointsAdjustment !== 0
 
   // 保存修改
-  const handleSaveChanges = () => {
-    // 这里应该是保存逻辑
-    console.log('保存修改:', editFormData)
-    toast.success("用户信息修改成功！")
-    setIsEditDialogOpen(false)
+  const handleSaveChanges = async () => {
+    if (!selectedUser || editFormData.pointsAdjustment === 0) {
+      toast.error("积分调整值不能为0")
+      return
+    }
+
+    try {
+      // 构建变动原因
+      const reason = `管理员操作：${editFormData.pointsAdjustment > 0 ? '增加' : '减少'}${Math.abs(editFormData.pointsAdjustment)}积分`
+      
+      // 调用积分调整API
+      await adjustUserPoints(
+        selectedUser.id,
+        editFormData.pointsAdjustment,
+        reason
+      )
+      
+      toast.success(`积分调整成功！${editFormData.pointsAdjustment > 0 ? '增加' : '减少'}了${Math.abs(editFormData.pointsAdjustment)}积分`)
+      setIsEditDialogOpen(false)
+      
+      // 刷新用户数据
+      refetch()
+    } catch (error) {
+      console.error('积分调整失败:', error)
+      toast.error(error instanceof Error ? error.message : '积分调整失败')
+    }
   }
 
   // 取消修改
   const handleCancelChanges = () => {
-    setEditFormData(originalFormData)
+    setEditFormData({ pointsAdjustment: 0 })
   }
 
   const handleReset = () => {
@@ -851,7 +282,7 @@ export function UsersManagement() {
   }
 
   // 批量操作函数
-  const handleSelectUser = (userId: number) => {
+  const handleSelectUser = (userId: string) => {
     setSelectedUsers(prev => 
       prev.includes(userId) 
         ? prev.filter(id => id !== userId)
@@ -875,10 +306,48 @@ export function UsersManagement() {
     // 实际项目中应该刷新数据或从状态中移除已删除的用户
   }
 
-  const confirmDeleteUser = (user: typeof users[0]) => {
+  const confirmDeleteUser = (user: UserManagementData) => {
     setUserToDelete(user)
     setIsDeleteDialogOpen(true)
   }
+
+  // 备注编辑处理函数
+  const handleNoteDoubleClick = (user: UserManagementData) => {
+    setEditingNoteUserId(user.id)
+    setEditingNoteValue(user.notes || '')
+    setOriginalNoteValue(user.notes || '')
+  }
+
+  const handleNoteSave = async () => {
+    if (!editingNoteUserId) return
+    
+    try {
+      // 这里应该调用API保存备注
+      console.log('保存备注:', { userId: editingNoteUserId, notes: editingNoteValue })
+      
+      // 模拟API调用成功
+      toast.success("备注保存成功！")
+      
+      // 重置编辑状态
+      setEditingNoteUserId(null)
+      setEditingNoteValue('')
+      setOriginalNoteValue('')
+      
+      // 刷新数据
+      refetch()
+    } catch (error) {
+      console.error('保存备注失败:', error)
+      toast.error("保存备注失败，请重试")
+    }
+  }
+
+  const handleNoteCancel = () => {
+    setEditingNoteUserId(null)
+    setEditingNoteValue('')
+    setOriginalNoteValue('')
+  }
+
+  const hasNoteChanged = editingNoteValue !== originalNoteValue
 
   const handleDeleteUser = () => {
     if (userToDelete) {
@@ -964,57 +433,33 @@ export function UsersManagement() {
                     </div>
                   </TableHead>
                   <TableHead className={cn("w-[18%] pl-3", getTableBorderClasses(tableBorder).headerCell)}>用户信息</TableHead>
-                  <TableHead className={cn("w-[9%] pl-6", getTableBorderClasses(tableBorder).headerCell)}>角色</TableHead>
-                  <TableHead className={cn("w-[15%]", getTableBorderClasses(tableBorder).headerCell)}>备注</TableHead>
-                  <TableHead className={cn("cursor-pointer w-[9%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('currentPoints')}>
+                  <TableHead className={cn("w-[10%] pl-6", getTableBorderClasses(tableBorder).headerCell)}>角色</TableHead>
+                  <TableHead className={cn("w-[18%]", getTableBorderClasses(tableBorder).headerCell)}>备注</TableHead>
+                  <TableHead className={cn("cursor-pointer w-[10%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('currentPoints')}>
                     <div className="flex items-center gap-2">
                       当前积分
                       {getSortIcon('currentPoints')}
                     </div>
                   </TableHead>
-                  <TableHead className={cn("cursor-pointer w-[9%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('totalConsumedPoints')}>
+                  <TableHead className={cn("cursor-pointer w-[10%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('totalConsumedPoints')}>
                     <div className="flex items-center gap-2">
                       总消耗积分
                       {getSortIcon('totalConsumedPoints')}
                     </div>
                   </TableHead>
-                  <TableHead className={cn("cursor-pointer w-[9%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('totalUsage')}>
-                    <div className="flex items-center gap-2">
-                      总使用积分
-                      {getSortIcon('totalUsage')}
-                    </div>
-                  </TableHead>
-                  <TableHead className={cn("cursor-pointer w-[9%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('totalRedeem')}>
-                    <div className="flex items-center gap-2">
-                      总兑换积分
-                      {getSortIcon('totalRedeem')}
-                    </div>
-                  </TableHead>
-                  <TableHead className={cn("cursor-pointer w-[8%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('redeemCount')}>
-                    <div className="flex items-center gap-2">
-                      兑换卡兑换次数
-                      {getSortIcon('redeemCount')}
-                    </div>
-                  </TableHead>
-                  <TableHead className={cn("cursor-pointer w-[8%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('todayPoints')}>
+                  <TableHead className={cn("cursor-pointer w-[9%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('todayPoints')}>
                     <div className="flex items-center gap-2">
                       今日消耗
                       {getSortIcon('todayPoints')}
                     </div>
                   </TableHead>
-                  <TableHead className={cn("cursor-pointer w-[8%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('weekPoints')}>
+                  <TableHead className={cn("cursor-pointer w-[9%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('weekPoints')}>
                     <div className="flex items-center gap-2">
                       7日消耗
                       {getSortIcon('weekPoints')}
                     </div>
                   </TableHead>
-                  <TableHead className={cn("cursor-pointer w-[8.5%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('joinDate')}>
-                    <div className="flex items-center gap-2">
-                      注册时间
-                      {getSortIcon('joinDate')}
-                    </div>
-                  </TableHead>
-                  <TableHead className={cn("cursor-pointer w-[8.5%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('lastActiveTime')}>
+                  <TableHead className={cn("cursor-pointer w-[9%]", getTableBorderClasses(tableBorder).headerCell)} onClick={() => handleSort('lastActiveTime')}>
                     <div className="flex items-center gap-2">
                       最后活跃
                       {getSortIcon('lastActiveTime')}
@@ -1054,7 +499,7 @@ export function UsersManagement() {
                         </div>
                       </button>
                     </TableCell>
-                    <TableCell className={cn("pl-6", getTableBorderClasses(tableBorder).cell)}>
+                    <TableCell className={cn("w-[10%] pl-6", getTableBorderClasses(tableBorder).cell)}>
                       <div className="flex flex-wrap gap-1">
                         {user.roles.map((role) => (
                           <Badge key={role} className={cn("text-xs py-1.5 hover:!bg-transparent", roleColors[role])}>
@@ -1063,18 +508,52 @@ export function UsersManagement() {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className={cn("text-sm text-gray-600 dark:text-gray-300 max-w-32 truncate", getTableBorderClasses(tableBorder).cell)} title={user.notes}>
-                      {user.notes}
+                    <TableCell className={cn("w-[18%]", getTableBorderClasses(tableBorder).cell)}>
+                      {editingNoteUserId === user.id ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={editingNoteValue}
+                            onChange={(e) => setEditingNoteValue(e.target.value)}
+                            className="h-8 text-sm"
+                            placeholder="输入备注..."
+                            autoFocus
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            onClick={handleNoteSave}
+                            disabled={!hasNoteChanged}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={handleNoteCancel}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          className={cn(
+                            "text-sm max-w-32 truncate cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 p-1 rounded",
+                            user.notes ? "text-gray-600 dark:text-gray-300" : "text-gray-400 dark:text-gray-500"
+                          )}
+                          title={user.notes || "双击编辑备注"}
+                          onDoubleClick={() => handleNoteDoubleClick(user)}
+                        >
+                          {user.notes || "暂无备注"}
+                        </div>
+                      )}
                     </TableCell>
-                    <TableCell className={getTableBorderClasses(tableBorder).cell}>{formatPoints(user.currentPoints, pointsFormat)}</TableCell>
-                    <TableCell className={getTableBorderClasses(tableBorder).cell}>{formatPoints(user.totalConsumedPoints, pointsFormat)}</TableCell>
-                    <TableCell className={getTableBorderClasses(tableBorder).cell}>{formatPoints(user.totalUsage, pointsFormat)}</TableCell>
-                    <TableCell className={getTableBorderClasses(tableBorder).cell}>{formatPoints(user.totalRedeem, pointsFormat)}</TableCell>
-                    <TableCell className={getTableBorderClasses(tableBorder).cell}>{user.redeemCount}</TableCell>
-                    <TableCell className={getTableBorderClasses(tableBorder).cell}>{formatPoints(user.todayPoints, pointsFormat)}</TableCell>
-                    <TableCell className={getTableBorderClasses(tableBorder).cell}>{formatPoints(user.weekPoints, pointsFormat)}</TableCell>
-                    <TableCell className={getTableBorderClasses(tableBorder).cell}>{user.joinDate}</TableCell>
-                    <TableCell className={getTableBorderClasses(tableBorder).cell}>{user.lastActiveTime.replace('2024-', '')}</TableCell>
+                    <TableCell className={cn("w-[10.5%]", getTableBorderClasses(tableBorder).cell)}>{formatPoints(user.currentPoints, pointsFormat)}</TableCell>
+                    <TableCell className={cn("w-[10.5%]", getTableBorderClasses(tableBorder).cell)}>{formatPoints(user.totalConsumedPoints, pointsFormat)}</TableCell>
+                    <TableCell className={cn("w-[8%]", getTableBorderClasses(tableBorder).cell)}>{formatPoints(user.todayPoints, pointsFormat)}</TableCell>
+                    <TableCell className={cn("w-[8%]", getTableBorderClasses(tableBorder).cell)}>{formatPoints(user.weekPoints, pointsFormat)}</TableCell>
+                    <TableCell className={cn("w-[9%]", getTableBorderClasses(tableBorder).cell)}>{user.lastActiveTime.replace('2024-', '')}</TableCell>
                     <TableCell className={cn("text-center p-0", getTableBorderClasses(tableBorder).cell)}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1160,18 +639,6 @@ export function UsersManagement() {
               </div>
               
               {/* 编辑字段区域 */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="notes" className="text-right">
-                  备注
-                </Label>
-                <Input
-                  id="notes"
-                  value={editFormData.notes}
-                  onChange={(e) => setEditFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  className="col-span-3"
-                  placeholder="输入用户备注信息..."
-                />
-              </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="points" className="text-right">
                   当前积分

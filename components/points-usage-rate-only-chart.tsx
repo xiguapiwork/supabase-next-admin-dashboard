@@ -11,33 +11,7 @@ import {
 import {
   ChartContainer,
 } from '@/components/ui/chart';
-
-// Define mock data directly in the file
-const mockDataCumulative = Array.from({ length: 30 }, (_, i) => {
-  const date = new Date();
-  date.setDate(date.getDate() - i);
-  const totalPoints = 10000 + i * 500 + Math.floor(Math.random() * 200);
-  const usedPoints = 3000 + i * 150 + Math.floor(Math.random() * 100);
-  return {
-    date: date.toISOString().split('T')[0],
-    totalPoints,
-    usedPoints,
-    usageRate: totalPoints > 0 ? (usedPoints / totalPoints) * 100 : 0,
-  };
-}).reverse();
-
-const mockDataNew = Array.from({ length: 30 }, (_, i) => {
-  const date = new Date();
-  date.setDate(date.getDate() - i);
-  const totalPoints = 200 + Math.floor(Math.random() * 100);
-  const usedPoints = 50 + Math.floor(Math.random() * 50);
-  return {
-    date: date.toISOString().split('T')[0],
-    totalPoints,
-    usedPoints,
-    usageRate: totalPoints > 0 ? (usedPoints / totalPoints) * 100 : 0,
-  };
-}).reverse();
+import { usePointsUsageStats } from '@/hooks/use-points-usage-stats';
 
 const chartConfig = {
   usageRate: {
@@ -106,9 +80,34 @@ interface PointsUsageRateOnlyChartProps {
 }
 
 export function PointsUsageRateOnlyChart({ dataType, timeRange }: PointsUsageRateOnlyChartProps) {
-  const data = (dataType === 'cumulative' ? mockDataCumulative : mockDataNew).slice(
-    -parseInt(timeRange)
+  const { data, loading, error } = usePointsUsageStats(
+    dataType as 'cumulative' | 'new',
+    parseInt(timeRange)
   );
+
+  if (loading) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-muted-foreground">加载中...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-destructive">加载失败: {error}</div>
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-muted-foreground">暂无数据</div>
+      </div>
+    );
+  }
 
   return (
     <ChartContainer config={chartConfig} className="h-[400px] w-full">
