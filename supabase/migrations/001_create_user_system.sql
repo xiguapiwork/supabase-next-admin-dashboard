@@ -1,24 +1,4 @@
 -- 用户系统设置脚本
--- 1. 创建存储桶用于默认头像
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'default-avatar',
-  'default-avatar',
-  true,
-  5242880, -- 5MB
-  ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp']
-);
-
--- 2. 设置存储桶的RLS策略
-CREATE POLICY "Default avatar images are publicly accessible" ON storage.objects
-FOR SELECT USING (bucket_id = 'default-avatar');
-
-CREATE POLICY "Anyone can upload a default avatar" ON storage.objects
-FOR INSERT WITH CHECK (bucket_id = 'default-avatar');
-
-CREATE POLICY "Anyone can update default avatars" ON storage.objects
-FOR UPDATE USING (bucket_id = 'default-avatar');
-
 -- 创建用户管理表
 CREATE TABLE public."user-management" (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
@@ -49,36 +29,7 @@ FOR UPDATE USING (
   )
 );
 
--- 6. 创建随机头像选择函数
-CREATE OR REPLACE FUNCTION public.get_random_avatar()
-RETURNS TEXT
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $$
-DECLARE
-  avatar_files TEXT[];
-  random_file TEXT;
-BEGIN
-  -- 动态查询default-avatar存储桶中的所有文件
-  SELECT ARRAY(
-    SELECT name 
-    FROM storage.objects 
-    WHERE bucket_id = 'default-avatar' 
-    AND name IS NOT NULL
-  ) INTO avatar_files;
-  
-  -- 如果存储桶中没有文件，返回null
-  IF array_length(avatar_files, 1) IS NULL OR array_length(avatar_files, 1) = 0 THEN
-    RETURN NULL;
-  END IF;
-  
-  -- 随机选择一个文件
-  SELECT avatar_files[floor(random() * array_length(avatar_files, 1) + 1)] INTO random_file;
-  
-  RETURN random_file;
-END;
-$$;
+-- 6. 随机头像选择函数在 002_create_avatar_bucket.sql 中定义
 
 -- 7. 创建新用户处理函数（已修正为正确版本）
 CREATE OR REPLACE FUNCTION handle_new_user()

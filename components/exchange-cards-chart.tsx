@@ -2,15 +2,19 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { ToggleGroupCustom } from "@/components/ui/toggle-group-custom"
 import { ExchangeCardsSituationChart } from './exchange-cards-situation-chart';
 import { ExchangeRateChart } from './exchange-rate-chart';
+import { useCreateTestData } from '@/hooks/use-create-test-data';
 
 export function ExchangeCardsChart() {
-  const [timeRange, setTimeRange] = useState('7');
-  const [dataType, setDataType] = useState('cumulative');
-  const [displayMode, setDisplayMode] = useState('quantity'); // 数量/积分切换
-  const [viewType, setViewType] = useState('situation'); // 积分卡情况/兑换率切换
+  const [timeRange, setTimeRange] = useState<number>(7);
+  const [dataType, setDataType] = useState<'cumulative' | 'new'>('cumulative');
+  const [displayMode, setDisplayMode] = useState<'quantity' | 'points'>('quantity'); // 数量/积分切换
+  const [viewType, setViewType] = useState<'situation' | 'rate'>('situation'); // 积分卡情况/兑换率切换
+  
+  const createTestData = useCreateTestData();
 
   return (
     <Card className="h-full flex flex-col">
@@ -22,6 +26,15 @@ export function ExchangeCardsChart() {
             value={viewType === 'situation' ? '积分卡情况' : '兑换率'}
             onValueChange={(value) => setViewType(value === '积分卡情况' ? 'situation' : 'rate')}
           />
+          {/* 测试数据按钮 */}
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => createTestData.mutate()}
+            disabled={createTestData.isPending}
+          >
+            {createTestData.isPending ? '创建中...' : '创建测试数据'}
+          </Button>
         </div>
         <div className="flex items-center gap-2">
           {/* 数量/积分切换 */}
@@ -40,7 +53,7 @@ export function ExchangeCardsChart() {
           <ToggleGroupCustom
             options={['7日', '30日']}
             value={`${timeRange}日`}
-            onValueChange={(value) => setTimeRange(value.replace('日', ''))}
+            onValueChange={(value) => setTimeRange(parseInt(value.replace('日', '')))}
           />
         </div>
       </CardHeader>
@@ -48,20 +61,20 @@ export function ExchangeCardsChart() {
         {viewType === 'situation' ? (
           <ExchangeCardsSituationChart
             dataType={dataType}
-            timeRange={timeRange}
+            timeRange={timeRange.toString()}
             displayMode={displayMode}
-            onDataTypeChange={setDataType}
-            onTimeRangeChange={setTimeRange}
-            onDisplayModeChange={setDisplayMode}
+            onDataTypeChange={(value) => setDataType(value as 'cumulative' | 'new')}
+            onTimeRangeChange={(value) => setTimeRange(parseInt(value))}
+            onDisplayModeChange={(value) => setDisplayMode(value as 'quantity' | 'points')}
           />
         ) : (
           <ExchangeRateChart
             dataType={dataType}
-            timeRange={timeRange}
+            timeRange={timeRange.toString()}
             displayMode={displayMode}
-            onDataTypeChange={setDataType}
-            onTimeRangeChange={setTimeRange}
-            onDisplayModeChange={setDisplayMode}
+            onDataTypeChange={(value) => setDataType(value as 'cumulative' | 'new')}
+            onTimeRangeChange={(value) => setTimeRange(parseInt(value))}
+            onDisplayModeChange={(value) => setDisplayMode(value as 'quantity' | 'points')}
           />
         )}
       </CardContent>

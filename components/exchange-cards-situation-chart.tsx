@@ -12,33 +12,7 @@ import {
 import {
   ChartContainer,
 } from '@/components/ui/chart';
-
-// Define mock data directly in the file
-const mockDataCumulative = Array.from({ length: 30 }, (_, i) => {
-  const date = new Date();
-  date.setDate(date.getDate() - i);
-  return {
-    date: date.toISOString().split('T')[0],
-    totalCards: 1000 + i * 30 + Math.floor(Math.random() * 50),
-    exchangedCards: 200 + i * 10 + Math.floor(Math.random() * 20),
-    totalPoints: (1000 + i * 30 + Math.floor(Math.random() * 50)) * 100, // 积分数量 = 卡数量 * 100
-    exchangedPoints: (200 + i * 10 + Math.floor(Math.random() * 20)) * 100, // 兑换积分 = 兑换卡数 * 100
-  };
-}).reverse();
-
-const mockDataNew = Array.from({ length: 30 }, (_, i) => {
-  const date = new Date();
-  date.setDate(date.getDate() - i);
-  const cards = 30 + Math.floor(Math.random() * 20);
-  const exchanged = 8 + Math.floor(Math.random() * 10);
-  return {
-    date: date.toISOString().split('T')[0],
-    totalCards: cards,
-    exchangedCards: exchanged,
-    totalPoints: cards * 100, // 积分数量 = 卡数量 * 100
-    exchangedPoints: exchanged * 100, // 兑换积分 = 兑换卡数 * 100
-  };
-}).reverse();
+import { useExchangeCardsData } from '@/hooks/use-exchange-cards-data';
 
 const chartConfig = {
   totalCards: {
@@ -120,9 +94,36 @@ export function ExchangeCardsSituationChart({
   timeRange, 
   displayMode 
 }: ExchangeCardsSituationChartProps) {
-  const data = (dataType === 'cumulative' ? mockDataCumulative : mockDataNew).slice(
-    -parseInt(timeRange)
+  const { data: rawData, isLoading, error } = useExchangeCardsData(
+    parseInt(timeRange), 
+    dataType as 'cumulative' | 'new'
   );
+
+  if (isLoading) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-muted-foreground">加载中...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-destructive">加载数据失败</div>
+      </div>
+    );
+  }
+
+  if (!rawData || rawData.length === 0) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-muted-foreground">暂无数据</div>
+      </div>
+    );
+  }
+
+  const data = rawData;
 
   // 根据displayMode决定显示的数据键
   const totalDataKey = displayMode === 'points' ? 'totalPoints' : 'totalCards';

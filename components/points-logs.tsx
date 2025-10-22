@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/dialog'
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { generateAvatarUrl } from '@/lib/avatar-utils'
 
 // 创建Supabase客户端
 const supabase = createClient()
@@ -444,7 +445,7 @@ export function PointsLogs() {
                     <TableCell className={cn("", getTableBorderClasses(tableBorder).cell)}>
                       <div className="flex items-center gap-3 rounded-md px-2 py-2">
                         <Avatar className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
-                          <AvatarImage src={log.user_avatar} alt={log.username || '未知用户'} />
+                          <AvatarImage src={generateAvatarUrl({ avatar: log.user_avatar }) || '/default-avatar/苹果.png'} alt={log.username || '未知用户'} />
                           <AvatarFallback className="text-base md:text-lg font-medium">
                             {(log.username || '')[0]}
                           </AvatarFallback>

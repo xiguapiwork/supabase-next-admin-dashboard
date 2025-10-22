@@ -54,6 +54,7 @@ import { formatPoints } from '@/lib/format-points'
 import { getTableBorderClasses } from '@/lib/table-border-utils'
 import { toast } from 'sonner'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { generateAvatarUrl } from '@/lib/avatar-utils'
 
 // 创建Supabase客户端
 const supabase = createClient()
@@ -638,12 +639,21 @@ export function ExchangeCards() {
                     </TableCell>
                     <TableCell className={cn("pl-3", getTableBorderClasses(tableBorder).cell)}>
                       <div className="flex w-full items-center gap-3 rounded-md px-2 py-2">
-                        <Avatar className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
-                          <AvatarImage src={card.redeemerAvatar} alt={card.redeemerUsername || '未兑换'} />
-                          <AvatarFallback className="text-base md:text-lg font-medium">
-                            {card.redeemerUsername ? card.redeemerUsername[0] : '-'}
-                          </AvatarFallback>
-                        </Avatar>
+                        {card.redeemerUsername ? (
+                          // 有兑换人时显示头像
+                          <Avatar className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
+                            <AvatarImage 
+                              src={card.redeemerAvatar && card.redeemerAvatar.trim() !== '' ? generateAvatarUrl({ avatar: card.redeemerAvatar }) || '/default-avatar/苹果.png' : '/default-avatar/苹果.png'} 
+                              alt={card.redeemerUsername} 
+                            />
+                            <AvatarFallback className="text-base md:text-lg font-medium">
+                              {card.redeemerUsername[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          // 没有兑换人时显示占位符
+                          <div className="w-8 h-8 md:w-10 md:h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex-shrink-0"></div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className={cn("font-medium truncate text-left leading-tight", !card.redeemerUsername && "text-gray-400")}>{card.redeemerUsername || '-'}</div>
                           <div className={cn("text-sm truncate text-left leading-tight", card.redeemerUsername ? "text-muted-foreground" : "text-gray-400")}>{card.redeemerEmail || '-'}</div>

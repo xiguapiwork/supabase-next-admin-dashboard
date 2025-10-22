@@ -36,9 +36,9 @@ export function UsersOverallSituationChart() {
       </CardHeader>
       <CardContent className="pt-4 flex-1 flex flex-col">
         {viewType === 'paymentRate' ? (
-          <PaymentRateChart timeRange={timeRange} dataType={dataType} />
+          <PaymentRateChart timeRange={parseInt(timeRange)} dataType={dataType as 'cumulative' | 'new'} />
         ) : (
-          <UsersCountChart timeRange={timeRange} dataType={dataType} />
+          <UsersCountChart timeRange={parseInt(timeRange)} dataType={dataType as 'cumulative' | 'new'} />
         )}
       </CardContent>
     </Card>

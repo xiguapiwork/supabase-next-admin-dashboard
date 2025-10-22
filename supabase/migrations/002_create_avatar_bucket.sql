@@ -33,3 +33,32 @@ FOR DELETE USING (
   bucket_id = 'avatar' 
   AND (storage.foldername(name))[1] = (select auth.uid())::text
 );
+
+-- 优化默认头像选择函数（使用 Vercel 静态资源）
+CREATE OR REPLACE FUNCTION public.get_random_avatar()
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  avatar_files TEXT[];
+  random_file TEXT;
+BEGIN
+  -- 使用静态资源路径，对应 public/default-avatar 文件夹中的文件
+  avatar_files := ARRAY[
+    '橙子.png',
+    '苹果.png', 
+    '草莓.png',
+    '菠萝.png',
+    '蓝莓.png',
+    '西瓜.png',
+    '鸭梨.png'
+  ];
+  
+  -- 随机选择一个文件
+  SELECT avatar_files[floor(random() * array_length(avatar_files, 1) + 1)] INTO random_file;
+  
+  RETURN random_file;
+END;
+$$;

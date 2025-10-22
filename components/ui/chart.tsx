@@ -47,20 +47,28 @@ function ChartContainer({
   >["children"]
 }) {
   const uniqueId = React.useId()
-  const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
+  const [chartId, setChartId] = React.useState<string>("")
+  
+  React.useEffect(() => {
+    // 在客户端渲染时设置ID，避免hydration mismatch
+    setChartId(`chart-${id || uniqueId.replace(/:/g, "")}`)
+  }, [id, uniqueId])
+  
+  // 在服务端渲染时使用固定ID，客户端渲染时使用动态ID
+  const finalChartId = chartId || `chart-${id || "default"}`
 
   return (
     <ChartContext.Provider value={{ config }}>
       <div
         data-slot="chart"
-        data-chart={chartId}
+        data-chart={finalChartId}
         className={cn(
           "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border flex aspect-video justify-center text-xs [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
           className
         )}
         {...props}
       >
-        <ChartStyle id={chartId} config={config} />
+        <ChartStyle id={finalChartId} config={config} />
         <RechartsPrimitive.ResponsiveContainer>
           {children}
         </RechartsPrimitive.ResponsiveContainer>

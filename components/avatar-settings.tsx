@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Camera, Upload, X } from "lucide-react";
+import { generateAvatarUrl } from "@/lib/avatar-utils";
 
 interface AvatarSettingsProps {
   user: {
@@ -32,16 +33,8 @@ export function AvatarSettings({ user, profile, avatarUrl }: AvatarSettingsProps
 
   // 获取当前头像URL
   const getCurrentAvatarUrl = () => {
-    if (previewUrl) return previewUrl; // 如果有预览图，优先显示
-    if (!profile?.avatar) return null;
-    
-    // 如果是默认头像
-    if (profile.avatar.includes('.png') && !profile.avatar.includes('/')) {
-      return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/default-avatar/${profile.avatar}`;
-    }
-    
-    // 如果是用户上传的头像
-    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatar/${profile.avatar}`;
+    if (previewUrl) return previewUrl;
+    return generateAvatarUrl(profile);
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

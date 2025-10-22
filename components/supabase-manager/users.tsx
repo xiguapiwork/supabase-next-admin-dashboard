@@ -42,7 +42,7 @@ export function UsersManager({ projectRef }: { projectRef: string }) {
         </Select>
       </div>
       <div className="px-8">
-        <UsersGrowthChart projectRef={projectRef} timeRange={timeRange} />
+        <UsersGrowthChart timeRange={timeRange} />
       </div>
       <SqlEditor
         hideChartOption

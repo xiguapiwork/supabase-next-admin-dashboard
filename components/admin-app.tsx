@@ -74,13 +74,11 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
 
   // 使用记录导出功能状态
   const [isLogsExportDialogOpen, setIsLogsExportDialogOpen] = useState(false)
-  const [logsExportStatusFilter, setLogsExportStatusFilter] = useState<'all' | '成功' | '失败' | '处理中'>('all')
   const [logsExportColumns, setLogsExportColumns] = useState({
     timestamp: true,
     username: true,
     userEmail: true,
     action: true,
-    status: true,
     details: true,
     initialPoints: true,
     pointsChange: true,
@@ -207,6 +205,143 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
       toast.error(`创建兑换卡失败：${errorMessage}`)
     } finally {
       setIsCreatingCard(false)
+    }
+  }
+
+  // 处理积分变动日志导出
+  const handleExportPointsLogs = async () => {
+    console.log('开始导出积分变动日志...')
+    try {
+      const supabase = createClient()
+      
+      // 获取所有积分变动日志数据（不分页）
+      const { data: pointsLogs, error } = await supabase.rpc('get_points_logs_list', {
+        p_limit: 10000, // 设置一个较大的限制
+        p_offset: 0,
+        p_search_term: null,
+        p_action_filter: null,
+        p_sort_field: '创建时间',
+        p_sort_order: 'desc'
+      })
+      
+      if (error) {
+        throw error
+      }
+
+      if (!pointsLogs || pointsLogs.length === 0) {
+        toast.error('没有可导出的数据')
+        return
+      }
+
+      // 构建CSV数据
+      const headers: string[] = []
+      const fieldMap: { [key: string]: string } = {
+        createdTime: '使用时间',
+        username: '用户名',
+        userEmail: '邮箱',
+        actionType: '使用功能',
+        actionReason: '使用详情',
+        initialPoints: '初始积分',
+        pointsChange: '变动积分',
+        finalPoints: '最终积分',
+        taskId: '任务ID'
+      }
+
+      // 根据选择的字段构建表头
+      Object.keys(logsExportColumns).forEach(key => {
+        if (logsExportColumns[key as keyof typeof logsExportColumns]) {
+          headers.push(fieldMap[key])
+        }
+      })
+
+      // 构建数据行
+      const rows = pointsLogs.map((log: {
+        创建时间: string;
+        username: string;
+        user_email: string;
+        变动类型: string;
+        变动原因: string;
+        变动前积分: number;
+        积分变动量: number;
+        变动后积分: number;
+        任务ID: string;
+      }) => {
+        const row: string[] = []
+        
+        Object.keys(logsExportColumns).forEach(key => {
+          if (logsExportColumns[key as keyof typeof logsExportColumns]) {
+            switch (key) {
+              case 'createdTime':
+                row.push(log.创建时间 ? new Date(log.创建时间).toLocaleString('zh-CN') : '')
+                break
+              case 'username':
+                row.push(log.username || '')
+                break
+              case 'userEmail':
+                row.push(log.user_email || '')
+                break
+              case 'actionType':
+                const actionTypeMap: Record<string, string> = {
+                  'card_redeem': '兑换积分卡',
+                  'feature_usage': '使用功能',
+                  'refund': '功能失败返回',
+                  'admin_adjust': '管理员调整'
+                }
+                row.push(actionTypeMap[log.变动类型] || log.变动类型)
+                break
+              case 'actionReason':
+                row.push(log.变动原因 || '')
+                break
+              case 'initialPoints':
+                row.push(log.变动前积分?.toString() || '')
+                break
+              case 'pointsChange':
+                row.push(log.积分变动量?.toString() || '')
+                break
+              case 'finalPoints':
+                row.push(log.变动后积分?.toString() || '')
+                break
+              case 'taskId':
+                row.push(log.任务ID || '')
+                break
+              default:
+                row.push('')
+            }
+          }
+        })
+        
+        return row
+      })
+
+      // 生成CSV内容
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((row: string[]) => row.map((cell: string) => `"${cell.replace(/"/g, '""')}"`).join(','))
+      ].join('\n')
+
+      // 创建并下载文件
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+      const filename = `积分变动日志_${timestamp}.csv`
+      link.setAttribute('download', filename)
+      
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success(`成功导出 ${pointsLogs.length} 条记录`)
+      setIsLogsExportDialogOpen(false)
+      
+    } catch (error: unknown) {
+      console.error('导出失败:', error)
+      const errorMessage = error instanceof Error ? error.message : '请重试'
+      toast.error(`导出失败：${errorMessage}`)
     }
   }
 
@@ -527,7 +662,7 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
                 <Button variant="outline" onClick={() => setIsUserExportDialogOpen(false)}>
                   取消
                 </Button>
-                <Button type="submit">导出</Button>
+                <Button onClick={handleExportPointsLogs}>导出</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -546,20 +681,6 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
                 <DialogTitle>导出积分变动日志</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">状态筛选</Label>
-                  <Select value={logsExportStatusFilter} onValueChange={(value: 'all' | '成功' | '失败' | '处理中') => setLogsExportStatusFilter(value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择状态" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">所有状态</SelectItem>
-                      <SelectItem value="成功">成功</SelectItem>
-                      <SelectItem value="失败">失败</SelectItem>
-                      <SelectItem value="处理中">处理中</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">选择导出字段</Label>
                   <div className="grid grid-cols-3 gap-3">
@@ -602,16 +723,6 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
                         }
                       />
                       <Label htmlFor="action" className="text-sm">使用功能</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="status" 
-                        checked={logsExportColumns.status}
-                        onCheckedChange={(checked) => 
-                          setLogsExportColumns(prev => ({ ...prev, status: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="status" className="text-sm">状态</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox 
@@ -670,7 +781,7 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
                 <Button variant="outline" onClick={() => setIsLogsExportDialogOpen(false)}>
                   取消
                 </Button>
-                <Button type="submit">导出</Button>
+                <Button onClick={handleExportPointsLogs}>导出</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -853,16 +964,6 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
                           }
                         />
                         <Label htmlFor="action" className="text-sm">操作</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="status" 
-                          checked={logsExportColumns.status}
-                          onCheckedChange={(checked) => 
-                            setLogsExportColumns(prev => ({ ...prev, status: checked as boolean }))
-                          }
-                        />
-                        <Label htmlFor="status" className="text-sm">状态</Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox 

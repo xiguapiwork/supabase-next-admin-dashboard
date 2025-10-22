@@ -11,33 +11,8 @@ import {
 import {
   ChartContainer,
 } from '@/components/ui/chart';
-
-// Define mock data directly in the file
-const mockDataCumulative = Array.from({ length: 30 }, (_, i) => {
-  const date = new Date();
-  date.setDate(date.getDate() - i);
-  const totalUsers = 500 + i * 20 + Math.floor(Math.random() * 20);
-  const paidUsers = 50 + i * 5 + Math.floor(Math.random() * 10);
-  return {
-    date: date.toISOString().split('T')[0],
-    totalUsers,
-    paidUsers,
-    paymentRate: totalUsers > 0 ? (paidUsers / totalUsers) * 100 : 0,
-  };
-}).reverse();
-
-const mockDataNew = Array.from({ length: 30 }, (_, i) => {
-  const date = new Date();
-  date.setDate(date.getDate() - i);
-  const totalUsers = 20 + Math.floor(Math.random() * 10);
-  const paidUsers = 5 + Math.floor(Math.random() * 5);
-  return {
-    date: date.toISOString().split('T')[0],
-    totalUsers,
-    paidUsers,
-    paymentRate: totalUsers > 0 ? (paidUsers / totalUsers) * 100 : 0,
-  };
-}).reverse();
+import { useUserCounts } from '@/hooks/use-user-counts';
+import { Loader2 } from 'lucide-react';
 
 const chartConfig = {
   paymentRate: {
@@ -95,19 +70,42 @@ const CustomTooltip = ({ active, payload, label, dataType }: CustomTooltipProps)
   return null;
 };
 
-interface PaymentRateChartProps {
-  dataType: string;
-  timeRange: string;
-}
+export function PaymentRateChart({ 
+  dataType, 
+  timeRange 
+}: { 
+  dataType: 'cumulative' | 'new';
+  timeRange: number;
+}) {
+  const { data: userCounts, isLoading, error } = useUserCounts(timeRange, dataType);
 
-export function PaymentRateChart({ dataType, timeRange }: PaymentRateChartProps) {
-  const data = (dataType === 'cumulative' ? mockDataCumulative : mockDataNew).slice(
-    -parseInt(timeRange)
-  );
+  if (isLoading) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center text-red-500">
+        加载数据失败
+      </div>
+    );
+  }
+
+  if (!userCounts || userCounts.length === 0) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center text-gray-500">
+        暂无数据
+      </div>
+    );
+  }
 
   return (
     <ChartContainer config={chartConfig} className="h-[400px] w-full">
-      <LineChart data={data}>
+      <LineChart data={userCounts}>
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey="date"

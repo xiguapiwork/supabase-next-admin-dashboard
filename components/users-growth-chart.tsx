@@ -8,7 +8,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-import { useGetUserCountsByDay } from '@/hooks/use-user-counts'
+import { useUserCounts } from '@/hooks/use-user-counts'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AlertTriangle } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -21,13 +21,11 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function UsersGrowthChart({
-  projectRef,
   timeRange,
 }: {
-  projectRef: string
   timeRange: number
 }) {
-  const { data: chartData, isLoading, isError } = useGetUserCountsByDay(projectRef, timeRange)
+  const { data: chartData, isLoading, isError } = useUserCounts(timeRange, 'new')
 
   return (
     <div>
