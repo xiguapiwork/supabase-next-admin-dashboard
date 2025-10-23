@@ -4,6 +4,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useUserExchangeHistory } from '@/hooks/use-user-exchange-history'
+import { useUserUsageHistory } from '@/hooks/use-user-usage-history'
 
 interface UserBasicInfo {
   id: string
@@ -18,17 +20,11 @@ interface UserBasicInfo {
 }
 
 export function UserDetails({ user, onBack }: { user: UserBasicInfo, onBack?: () => void }) {
-  const exchangeHistory = [
-    { time: '2024-03-01 10:12', source: '兑换卡：新春礼包', points: +200 },
-    { time: '2024-03-08 18:30', source: '手动加分：运营活动', points: +50 },
-    { time: '2024-03-10 09:45', source: '兑换卡：会员续费奖励', points: +100 },
-  ]
-
-  const usageHistory = [
-    { time: '2024-03-12 14:02', feature: '功能一：批量处理', points: -20, status: '成功' },
-    { time: '2024-03-13 16:20', feature: '功能二：AI分析', points: -30, status: '成功' },
-    { time: '2024-03-14 21:05', feature: '功能一：批量处理', points: -20, status: '失败' },
-  ]
+  // 获取真实的兑换历史数据
+  const { data: exchangeHistory = [], isLoading: exchangeLoading, error: exchangeError } = useUserExchangeHistory(user.id, 20)
+  
+  // 获取真实的使用历史数据
+  const { data: usageHistory = [], isLoading: usageLoading, error: usageError } = useUserUsageHistory(user.id, 20)
 
   return (
     <div className="p-6 pt-4 lg:p-8 lg:pt-8 space-y-6">
@@ -97,13 +93,33 @@ export function UserDetails({ user, onBack }: { user: UserBasicInfo, onBack?: ()
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {exchangeHistory.map((item, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell>{item.time}</TableCell>
-                    <TableCell>{item.source}</TableCell>
-                    <TableCell className="text-green-600">{item.points}</TableCell>
+                {exchangeLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4">
+                      加载中...
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : exchangeError ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-red-500">
+                      加载失败，请重试
+                    </TableCell>
+                  </TableRow>
+                ) : exchangeHistory.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                      暂无兑换记录
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  exchangeHistory.map((item, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>{item.time}</TableCell>
+                      <TableCell>{item.source}</TableCell>
+                      <TableCell className="text-green-600">+{item.points}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -126,14 +142,42 @@ export function UserDetails({ user, onBack }: { user: UserBasicInfo, onBack?: ()
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {usageHistory.map((item, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell>{item.time}</TableCell>
-                    <TableCell>{item.feature}</TableCell>
-                    <TableCell className="text-red-600">{item.points}</TableCell>
-                    <TableCell>{item.status}</TableCell>
+                {usageLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-4">
+                      加载中...
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : usageError ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-4 text-red-500">
+                      加载失败，请重试
+                    </TableCell>
+                  </TableRow>
+                ) : usageHistory.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                      暂无使用记录
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  usageHistory.map((item, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>{item.time}</TableCell>
+                      <TableCell>{item.feature}</TableCell>
+                      <TableCell className="text-red-600">{item.points}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          item.status === '成功' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

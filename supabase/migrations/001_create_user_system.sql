@@ -4,7 +4,7 @@ CREATE TABLE public."user-management" (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'paid')),
-  points INTEGER NOT NULL DEFAULT 0,
+  points DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   avatar TEXT,
   备注 TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -47,13 +47,13 @@ BEGIN
     split_part(NEW.email, '@', 1)
   );
 
-  -- 插入用户资料，初始积分为 0
+  -- 插入用户资料，初始积分为 0.00
   INSERT INTO public."user-management" (id, username, avatar, points)
   VALUES (
     NEW.id,
     user_name,
     public.get_random_avatar(),
-    0
+    0.00
   );
 
   RETURN NEW;
@@ -107,7 +107,7 @@ RETURNS TABLE (
   id UUID,
   username TEXT,
   role TEXT,
-  points INTEGER,
+  points DECIMAL(10,2),
   avatar TEXT,
   备注 TEXT,
   created_at TIMESTAMP WITH TIME ZONE,

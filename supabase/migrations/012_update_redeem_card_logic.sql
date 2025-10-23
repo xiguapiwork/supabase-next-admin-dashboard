@@ -9,7 +9,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  card_points INTEGER;
+  card_points DECIMAL(10,2);
   current_status BOOLEAN;
   user_role TEXT;
   reason_text TEXT;

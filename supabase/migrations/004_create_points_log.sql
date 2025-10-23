@@ -4,9 +4,9 @@ CREATE TABLE public."points_log" (
   用户ID UUID NOT NULL REFERENCES public."user-management"(id) ON DELETE CASCADE,
   
   -- 积分变动信息
-  变动前积分 INTEGER NOT NULL, -- 变动前积分
-  积分变动量 INTEGER NOT NULL, -- 积分变动量（正数为增加，负数为扣除）
-  变动后积分 INTEGER NOT NULL, -- 变动后积分
+  变动前积分 DECIMAL(10,2) NOT NULL, -- 变动前积分
+  积分变动量 DECIMAL(10,2) NOT NULL, -- 积分变动量（正数为增加，负数为扣除）
+  变动后积分 DECIMAL(10,2) NOT NULL, -- 变动后积分
   
   -- 变动类型和原因
   变动类型 TEXT NOT NULL CHECK (变动类型 IN ('card_redeem', 'feature_usage', 'refund', 'admin_adjust')),
@@ -14,7 +14,7 @@ CREATE TABLE public."points_log" (
   
   -- 关联信息
   兑换卡卡号 TEXT REFERENCES public."exchange-cards"(卡号) ON DELETE SET NULL, -- 如果是兑换卡获得积分
-  任务ID UUID, -- 如果是功能使用，关联任务ID（外键约束稍后添加）
+  任务ID TEXT, -- 如果是功能使用，关联任务ID（外键约束稍后添加）
   
   -- 操作信息
   操作人ID UUID REFERENCES public."user-management"(id) ON DELETE SET NULL, -- 操作人（管理员调整时使用）
@@ -56,7 +56,7 @@ FOR INSERT WITH CHECK (
 -- 创建积分变动函数
 CREATE OR REPLACE FUNCTION public.add_points_log(
   p_user_id UUID,
-  p_points_change INTEGER,
+  p_points_change DECIMAL(10,2),
   p_change_type TEXT,
   p_reason TEXT,
   p_exchange_card_number TEXT DEFAULT NULL,
@@ -69,8 +69,8 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_points_before INTEGER;
-  v_points_after INTEGER;
+  v_points_before DECIMAL(10,2);
+  v_points_after DECIMAL(10,2);
   v_log_id UUID;
 BEGIN
   -- 获取用户当前积分（加行锁防止并发问题）
@@ -119,13 +119,13 @@ CREATE OR REPLACE FUNCTION get_points_logs_list(
 RETURNS TABLE (
   积分记录ID UUID,
   用户ID UUID,
-  变动前积分 INTEGER,
-  积分变动量 INTEGER,
-  变动后积分 INTEGER,
+  变动前积分 DECIMAL(10,2),
+  积分变动量 DECIMAL(10,2),
+  变动后积分 DECIMAL(10,2),
   变动类型 TEXT,
   变动原因 TEXT,
   兑换卡卡号 TEXT,
-  任务ID UUID,
+  任务ID TEXT,
   操作人ID UUID,
   创建时间 TIMESTAMP WITH TIME ZONE,
   username TEXT,
@@ -154,7 +154,7 @@ BEGIN
   -- 构建WHERE条件
   IF p_search_term != '' THEN
     v_where_conditions := array_append(v_where_conditions, 
-      format('(u.username ILIKE ''%%%s%%'' OR au.email ILIKE ''%%%s%%'' OR pl.变动原因 ILIKE ''%%%s%%'' OR pl.任务ID::TEXT ILIKE ''%%%s%%'')', 
+      format('(u.username ILIKE ''%%%s%%'' OR au.email ILIKE ''%%%s%%'' OR pl.变动原因 ILIKE ''%%%s%%'' OR pl.任务ID ILIKE ''%%%s%%'')', 
         p_search_term, p_search_term, p_search_term, p_search_term));
   END IF;
   
@@ -232,7 +232,7 @@ BEGIN
   -- 构建WHERE条件
   IF p_search_term != '' THEN
     v_where_conditions := array_append(v_where_conditions, 
-      format('(u.username ILIKE ''%%%s%%'' OR u.email ILIKE ''%%%s%%'' OR pl.变动原因 ILIKE ''%%%s%%'' OR pl.任务ID::TEXT ILIKE ''%%%s%%'')', 
+      format('(u.username ILIKE ''%%%s%%'' OR u.email ILIKE ''%%%s%%'' OR pl.变动原因 ILIKE ''%%%s%%'' OR pl.任务ID ILIKE ''%%%s%%'')', 
         p_search_term, p_search_term, p_search_term, p_search_term));
   END IF;
   

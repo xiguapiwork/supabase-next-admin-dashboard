@@ -13,20 +13,20 @@ DECLARE
   v_total_paid_users INTEGER := 0;
   v_new_users INTEGER := 0;
   v_new_paid_users INTEGER := 0;
-  v_new_paid_users_points INTEGER := 0;
+  v_new_paid_users_points DECIMAL(10,2) := 0.00;
   v_new_redeem_count INTEGER := 0;
-  v_new_redeem_points INTEGER := 0;
+  v_new_redeem_points DECIMAL(10,2) := 0.00;
   v_total_redeem_count INTEGER := 0;
-  v_total_redeem_points INTEGER := 0;
-  v_new_consumption INTEGER := 0;
+  v_total_redeem_points DECIMAL(10,2) := 0.00;
+  v_new_consumption DECIMAL(10,2) := 0.00;
   v_new_consumption_count INTEGER := 0;
-  v_total_consumption INTEGER := 0;
+  v_total_consumption DECIMAL(10,2) := 0.00;
   v_total_consumption_count INTEGER := 0;
   
   -- 前一天的累计数据
   v_prev_total_redeem_count INTEGER := 0;
-  v_prev_total_redeem_points INTEGER := 0;
-  v_prev_total_consumption INTEGER := 0;
+  v_prev_total_redeem_points DECIMAL(10,2) := 0.00;
+  v_prev_total_consumption DECIMAL(10,2) := 0.00;
   v_prev_total_consumption_count INTEGER := 0;
   
   -- 日期范围

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -96,9 +96,20 @@ export function UsersManagement() {
   const userIdParam = searchParams.get('userId')
   const detailsUser = userIdParam && users ? users.find(u => u.id === userIdParam) : null
 
+  // 组件首次加载时，如果URL中有userId参数但找不到对应用户，自动清除参数
+  useEffect(() => {
+    if (userIdParam && users && users.length > 0 && !detailsUser) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete('userId')
+      router.replace(`?${params.toString()}`)
+    }
+  }, [userIdParam, users, detailsUser, searchParams, router])
+
   const handleBackToList = () => {
-    // 使用浏览器历史后退，保留上一页面的状态（搜索、分页、排序等）
-    router.back()
+    // 清除userId参数，保留其他查询参数（搜索、分页、排序等）
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('userId')
+    router.push(`?${params.toString()}`)
   }
 
   const handleViewDetails = (user: UserManagementData) => {

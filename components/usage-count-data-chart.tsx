@@ -11,27 +11,7 @@ import {
 import {
   ChartContainer,
 } from '@/components/ui/chart';
-
-// Define mock data directly in the file
-const mockDataCumulative = Array.from({ length: 30 }, (_, i) => {
-  const date = new Date();
-  date.setDate(date.getDate() - i);
-  return {
-    date: date.toISOString().split('T')[0],
-    totalUsage: 1000 + i * 50 + Math.floor(Math.random() * 20),
-    successUsage: 800 + i * 40 + Math.floor(Math.random() * 15),
-  };
-}).reverse();
-
-const mockDataNew = Array.from({ length: 30 }, (_, i) => {
-  const date = new Date();
-  date.setDate(date.getDate() - i);
-  return {
-    date: date.toISOString().split('T')[0],
-    totalUsage: 30 + Math.floor(Math.random() * 15),
-    successUsage: 25 + Math.floor(Math.random() * 10),
-  };
-}).reverse();
+import { useUsageStats } from '@/hooks/use-usage-stats';
 
 const chartConfig = {
   totalUsage: {
@@ -103,9 +83,34 @@ interface UsageCountDataChartProps {
 }
 
 export function UsageCountDataChart({ dataType, timeRange }: UsageCountDataChartProps) {
-  const data = (dataType === 'cumulative' ? mockDataCumulative : mockDataNew).slice(
-    -parseInt(timeRange)
+  const { data, loading, error } = useUsageStats(
+    dataType as 'cumulative' | 'new',
+    parseInt(timeRange)
   );
+
+  if (loading) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-muted-foreground">加载中...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-destructive">加载失败: {error}</div>
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-muted-foreground">暂无数据</div>
+      </div>
+    );
+  }
 
   return (
     <ChartContainer config={chartConfig} className="h-[400px] w-full">

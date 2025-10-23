@@ -2,7 +2,7 @@
 CREATE TABLE public."exchange-cards" (
   卡号 TEXT PRIMARY KEY,
   卡片名称 TEXT NOT NULL,
-  积分数量 INTEGER NOT NULL CHECK (积分数量 > 0),
+  积分数量 DECIMAL(10,2) NOT NULL CHECK (积分数量 > 0),
   备注 TEXT,
   状态 BOOLEAN DEFAULT true, -- true: 可用, false: 已兑换
   兑换人 UUID REFERENCES public."user-management"(id) ON DELETE SET NULL,
@@ -82,7 +82,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  card_points INTEGER;
+  card_points DECIMAL(10,2);
   current_status BOOLEAN;
 BEGIN
   -- 检查卡片是否存在且未被兑换（加行锁防止并发兑换）
@@ -122,7 +122,7 @@ CREATE OR REPLACE FUNCTION get_user_exchange_history(user_id UUID DEFAULT auth.u
 RETURNS TABLE (
   卡号 TEXT,
   卡片名称 TEXT,
-  积分数量 INTEGER,
+  积分数量 DECIMAL(10,2),
   备注 TEXT,
   状态 BOOLEAN,
   创建时间 TIMESTAMP WITH TIME ZONE,
@@ -196,14 +196,14 @@ $$;
 -- 批量创建兑换卡函数
 CREATE OR REPLACE FUNCTION batch_create_exchange_cards(
   p_card_name TEXT,
-  p_points INTEGER,
+  p_points DECIMAL(10,2),
   p_description TEXT DEFAULT NULL,
   p_quantity INTEGER DEFAULT 1
 )
 RETURNS TABLE (
   卡号 TEXT,
   卡片名称 TEXT,
-  积分数量 INTEGER,
+  积分数量 DECIMAL(10,2),
   备注 TEXT,
   状态 BOOLEAN,
   创建时间 TIMESTAMP WITH TIME ZONE
@@ -262,7 +262,7 @@ CREATE OR REPLACE FUNCTION get_exchange_cards_list()
 RETURNS TABLE (
   卡号 TEXT,
   卡片名称 TEXT,
-  积分数量 INTEGER,
+  积分数量 DECIMAL(10,2),
   备注 TEXT,
   状态 BOOLEAN,
   兑换人 UUID,
@@ -301,7 +301,7 @@ $$;
 CREATE OR REPLACE FUNCTION update_exchange_card(
   p_card_number TEXT,
   p_card_name TEXT,
-  p_points INTEGER,
+  p_points DECIMAL(10,2),
   p_description TEXT DEFAULT NULL
 )
 RETURNS BOOLEAN

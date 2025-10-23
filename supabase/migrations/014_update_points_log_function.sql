@@ -3,7 +3,7 @@
 
 CREATE OR REPLACE FUNCTION public.add_points_log(
   p_user_id UUID,
-  p_points_change INTEGER,
+  p_points_change DECIMAL(10,2),
   p_change_type TEXT,
   p_reason TEXT,
   p_exchange_card_number TEXT DEFAULT NULL,
@@ -16,12 +16,12 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_points_before INTEGER;
-  v_points_after INTEGER;
-  v_total_usage_before INTEGER;
-  v_total_redeem_before INTEGER;
-  v_total_usage_after INTEGER;
-  v_total_redeem_after INTEGER;
+  v_points_before DECIMAL(10,2);
+  v_points_after DECIMAL(10,2);
+  v_total_usage_before DECIMAL(10,2);
+  v_total_redeem_before DECIMAL(10,2);
+  v_total_usage_after DECIMAL(10,2);
+  v_total_redeem_after DECIMAL(10,2);
   v_log_id UUID;
 BEGIN
   -- 获取用户当前积分和统计信息（加行锁防止并发问题）
@@ -111,16 +111,16 @@ END;
 $$;
 
 -- 添加函数注释
-COMMENT ON FUNCTION public.add_points_log(UUID, INTEGER, TEXT, TEXT, TEXT, UUID, UUID) IS '记录积分变动并同时维护total_usage和total_redeem统计字段';
+COMMENT ON FUNCTION public.add_points_log(UUID, DECIMAL, TEXT, TEXT, TEXT, UUID, UUID) IS '记录积分变动并同时维护total_usage和total_redeem统计字段';
 
 -- 创建积分统计修复函数（用于修复可能的数据不一致）
 CREATE OR REPLACE FUNCTION public.fix_user_points_stats(p_user_id UUID DEFAULT NULL)
 RETURNS TABLE (
   user_id UUID,
-  old_total_usage INTEGER,
-  new_total_usage INTEGER,
-  old_total_redeem INTEGER,
-  new_total_redeem INTEGER,
+  old_total_usage DECIMAL(10,2),
+  new_total_usage DECIMAL(10,2),
+  old_total_redeem DECIMAL(10,2),
+  new_total_redeem DECIMAL(10,2),
   fixed BOOLEAN
 )
 LANGUAGE plpgsql

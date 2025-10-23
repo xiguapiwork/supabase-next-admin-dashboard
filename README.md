@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🍌 Supabanana</h1>
+  <h1>📊 Supabase Next Admin Dashboard</h1>
   <p>基于 Next.js 和 Supabase 的智能用户管理平台</p>
 </div>
 
@@ -57,7 +57,7 @@ Vercel 部署将引导您创建 Supabase 账户和项目。
 
 安装 Supabase 集成后，所有相关的环境变量将自动分配给项目，使部署完全正常运行。
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fyour-username%2Fsupabanana&project-name=supabanana&repository-name=supabanana)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fyour-username%2Fsupabase-next-admin-dashboard&project-name=supabase-next-admin-dashboard&repository-name=supabase-next-admin-dashboard)
 
 ## 本地运行
 
@@ -68,8 +68,8 @@ Vercel 部署将引导您创建 Supabase 账户和项目。
 2. 克隆项目到本地
 
    ```bash
-   git clone https://github.com/your-username/supabanana.git
-   cd supabanana
+   git clone https://github.com/your-username/supabase-next-admin-dashboard.git
+   cd supabase-next-admin-dashboard
    ```
 
 3. 安装依赖
@@ -135,7 +135,7 @@ CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.ui
 ## 项目结构
 
 ```
-supabanana/
+supabase-next-admin-dashboard/
 ├── app/                          # Next.js App Router 页面
 │   ├── auth/                     # 认证相关页面
 │   │   ├── login/               # 登录页面
@@ -207,7 +207,7 @@ supabanana/
 
 ## 反馈和问题
 
-如有问题或建议，请在 [GitHub Issues](https://github.com/your-username/supabanana/issues) 中提交。
+如有问题或建议，请在 [GitHub Issues](https://github.com/your-username/supabase-next-admin-dashboard/issues) 中提交。
 
 ## 更多资源
 

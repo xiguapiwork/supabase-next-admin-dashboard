@@ -20,28 +20,28 @@ CREATE TABLE public."daily_reports" (
   新增付费用户数 INTEGER NOT NULL DEFAULT 0,
   
   -- 6. 新增付费用户的兑换积分（昨天积分日志变动原因中新用户兑换的对应积分总和）
-  新增付费用户兑换积分 INTEGER NOT NULL DEFAULT 0,
+  新增付费用户兑换积分 DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   
   -- 7. 新增兑换卡片数量（昨日变动类型中是card_redeem兑换的总次数）
   新增兑换卡片数量 INTEGER NOT NULL DEFAULT 0,
   
   -- 8. 新增兑换卡片积分（昨日变动类型中是card_redeem兑换的总积分）
-  新增兑换卡片积分 INTEGER NOT NULL DEFAULT 0,
+  新增兑换卡片积分 DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   
   -- 9. 总兑换卡片数量（前天的总兑换卡数量加上新增兑换卡片数量）
   总兑换卡片数量 INTEGER NOT NULL DEFAULT 0,
   
   -- 10. 总兑换卡片积分（前天的总兑换卡积分加上新增兑换卡片积分）
-  总兑换卡片积分 INTEGER NOT NULL DEFAULT 0,
+  总兑换卡片积分 DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   
   -- 11. 新增积分消耗（所有昨天扣分的积分总和）
-  新增积分消耗 INTEGER NOT NULL DEFAULT 0,
+  新增积分消耗 DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   
   -- 12. 新增扣分消耗次数（所有昨天扣分的积分次数总和）
   新增扣分消耗次数 INTEGER NOT NULL DEFAULT 0,
   
   -- 13. 总积分消耗（前天的总积分消耗加上新增积分消耗）
-  总积分消耗 INTEGER NOT NULL DEFAULT 0,
+  总积分消耗 DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   
   -- 14. 总积分消耗次数（前天的总积分消耗次数加上新增积分消耗次数）
   总积分消耗次数 INTEGER NOT NULL DEFAULT 0,
@@ -65,7 +65,7 @@ CREATE POLICY "管理员可以查看所有日报数据" ON public."daily_reports
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM public."user-management" 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE id = (select auth.uid()) AND role = 'admin'
     )
   );
 
@@ -73,7 +73,7 @@ CREATE POLICY "管理员可以插入日报数据" ON public."daily_reports"
   FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM public."user-management" 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE id = (select auth.uid()) AND role = 'admin'
     )
   );
 
@@ -81,7 +81,7 @@ CREATE POLICY "管理员可以更新日报数据" ON public."daily_reports"
   FOR UPDATE USING (
     EXISTS (
       SELECT 1 FROM public."user-management" 
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE id = (select auth.uid()) AND role = 'admin'
     )
   );
 

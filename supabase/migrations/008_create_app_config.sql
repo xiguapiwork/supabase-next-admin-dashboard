@@ -7,7 +7,7 @@ CREATE TABLE public.app_config (
   parent_id UUID REFERENCES public.app_config(id) ON DELETE CASCADE,
   配置名称 TEXT NOT NULL,
   配置类型 TEXT NOT NULL CHECK (配置类型 IN ('category', 'function')),
-  积分消耗 INTEGER DEFAULT 0 CHECK (积分消耗 >= 0),
+  积分消耗 DECIMAL(10,2) DEFAULT 0.00 CHECK (积分消耗 >= 0),
   排序顺序 INTEGER DEFAULT 0,
   备注 TEXT,
   创建时间 TIMESTAMPTZ DEFAULT NOW(),
@@ -50,7 +50,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  points INTEGER;
+  points DECIMAL(10,2);
 BEGIN
   SELECT 积分消耗 INTO points
   FROM public.app_config
@@ -66,7 +66,7 @@ CREATE OR REPLACE FUNCTION public.get_functions_by_category(category_name TEXT)
 RETURNS TABLE(
   id UUID,
   功能名称 TEXT,
-  积分消耗 INTEGER,
+  积分消耗 DECIMAL(10,2),
   排序顺序 INTEGER,
   备注 TEXT
 )
@@ -109,7 +109,7 @@ RETURNS TABLE(
   parent_id UUID,
   配置名称 TEXT,
   配置类型 TEXT,
-  积分消耗 INTEGER,
+  积分消耗 DECIMAL(10,2),
   排序顺序 INTEGER,
   备注 TEXT,
   层级 INTEGER
@@ -160,7 +160,7 @@ CREATE OR REPLACE FUNCTION public.upsert_app_config(
   p_parent_id UUID DEFAULT NULL,
   p_配置名称 TEXT DEFAULT NULL,
   p_配置类型 TEXT DEFAULT NULL,
-  p_积分消耗 INTEGER DEFAULT 0,
+  p_积分消耗 DECIMAL(10,2) DEFAULT 0.00,
   p_排序顺序 INTEGER DEFAULT 0,
   p_备注 TEXT DEFAULT NULL
 )
@@ -233,7 +233,7 @@ RETURNS TABLE(
   parent_id UUID,
   配置名称 TEXT,
   配置类型 TEXT,
-  积分消耗 INTEGER,
+  积分消耗 DECIMAL(10,2),
   排序顺序 INTEGER,
   备注 TEXT,
   创建时间 TIMESTAMPTZ,

@@ -2,6 +2,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Activity } from 'lucide-react';
+import { useUsageStats } from '@/hooks/use-usage-stats';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface UsageCountSituationCardProps {
   onClick?: () => void;
@@ -9,10 +11,13 @@ interface UsageCountSituationCardProps {
 }
 
 const UsageCountSituationCard: React.FC<UsageCountSituationCardProps> = ({ onClick, isSelected }) => {
-  // 模拟数据
-  const successCount = 7234; // 成功数
-  const totalUsageCount = 8567; // 使用总数
-  const successRate = Math.round((successCount / totalUsageCount) * 100); // 成功率
+  const { data: usageData, loading } = useUsageStats('cumulative', 7);
+  
+  // 使用真实数据或回退到模拟数据
+  const latestData = usageData && usageData.length > 0 ? usageData[usageData.length - 1] : null;
+  const totalUsageCount = latestData?.totalUsage || 8567;
+  const successCount = latestData?.successUsage || 7234;
+  const successRate = latestData?.successRate || 84;
 
   return (
     <Card
@@ -35,7 +40,13 @@ const UsageCountSituationCard: React.FC<UsageCountSituationCardProps> = ({ onCli
             成功/总使用数
           </div>
           <div className="text-sm">
-            {successCount.toLocaleString()} / <span className="font-bold">{totalUsageCount.toLocaleString()}</span>
+            {loading ? (
+              <Skeleton className="h-4 w-20" />
+            ) : (
+              <>
+                {successCount.toLocaleString()} / <span className="font-bold">{totalUsageCount.toLocaleString()}</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -53,7 +64,11 @@ const UsageCountSituationCard: React.FC<UsageCountSituationCardProps> = ({ onCli
             成功率
           </div>
           <div className="text-xs font-bold">
-            {successRate}%
+            {loading ? (
+              <Skeleton className="h-3 w-8" />
+            ) : (
+              `${successRate}%`
+            )}
           </div>
         </div>
       </CardContent>

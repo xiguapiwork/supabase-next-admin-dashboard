@@ -9,7 +9,7 @@ export default async function Index() {
         {/* Hero Section */}
         <section className="text-center space-y-6">
           <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            欢迎使用 SupaBanana
+            欢迎使用 Supabase Next Admin Dashboard
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             一个基于 Next.js 和 Supabase 构建的现代化全栈应用模板

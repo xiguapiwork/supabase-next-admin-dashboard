@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AdminLayout } from '@/components/admin-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,7 +26,6 @@ import { ExchangeCards } from './exchange-cards'
 import { PointsLogs } from './points-logs'
 import { TaskLogs } from './task-logs'
 import { Setting } from './setting'
-import { DatabaseTest } from './database-test'
 import { AppSettingsProvider } from '@/contexts/AppSettingsContext'
 import { ExchangeCardsProvider, useExchangeCardsRefresh } from '@/contexts/ExchangeCardsContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -40,7 +40,29 @@ const queryClient = new QueryClient()
 
 function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
   const [currentPage, setCurrentPage] = useState(initialPage)
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { triggerRefresh } = useExchangeCardsRefresh()
+
+  // 处理页面切换，清除特定页面的URL参数
+  const handlePageChange = (page: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    let needsUpdate = false
+    
+    // 如果当前页面是用户管理页面或者要切换到用户管理页面，清除userId参数
+    // 这样可以确保在任何情况下都不会有userId参数残留
+    if (params.has('userId')) {
+      params.delete('userId')
+      needsUpdate = true
+    }
+    
+    // 如果需要更新URL，使用replace避免在历史记录中添加额外条目
+    if (needsUpdate) {
+      router.replace(`?${params.toString()}`)
+    }
+    
+    setCurrentPage(page)
+  }
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   const [exportDataType, setExportDataType] = useState('all')
@@ -514,8 +536,6 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
         return <TaskLogs />
       case '/setting':
         return <Setting />
-      case '/database-test':
-        return <DatabaseTest />
       default:
         return <Dashboard />
     }
@@ -1237,7 +1257,7 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
   return (
     <AdminLayout
       currentPath={currentPage}
-      onPageChange={setCurrentPage}
+      onPageChange={handlePageChange}
       headerActions={renderHeaderActions()}
     >
       {renderCurrentPage()}

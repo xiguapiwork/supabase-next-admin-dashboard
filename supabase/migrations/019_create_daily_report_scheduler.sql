@@ -43,18 +43,33 @@ COMMENT ON FUNCTION public.scheduled_daily_report_job() IS '定时任务：每�
 -- 注意：以下SQL需要在启用pg_cron扩展后执行
 -- 时间设置为中国时间每天0点01分（UTC时间16点01分，因为中国时间=UTC+8）
 
--- 删除可能存在的旧任务
-SELECT cron.unschedule('daily-report-generator') WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'daily-report-generator'
-);
-
--- 创建新的定时任务
--- 中国时间0点01分 = UTC时间16点01分（前一天）
-SELECT cron.schedule(
-  'daily-report-generator',           -- 任务名称
-  '1 16 * * *',                      -- cron表达式：每天UTC时间16点01分（中国时间0点01分）
-  'SELECT public.scheduled_daily_report_job();'  -- 要执行的SQL
-);
+-- 尝试创建定时任务，如果 pg_cron 不可用则跳过
+DO $$
+BEGIN
+  -- 检查 pg_cron 扩展是否存在
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    -- 删除可能存在的旧任务
+    PERFORM cron.unschedule('daily-report-generator') WHERE EXISTS (
+      SELECT 1 FROM cron.job WHERE jobname = 'daily-report-generator'
+    );
+    
+    -- 创建新的定时任务
+    -- 中国时间0点01分 = UTC时间16点01分（前一天）
+    PERFORM cron.schedule(
+      'daily-report-generator',           -- 任务名称
+      '1 16 * * *',                      -- cron表达式：每天UTC时间16点01分（中国时间0点01分）
+      'SELECT public.scheduled_daily_report_job();'  -- 要执行的SQL
+    );
+    
+    RAISE NOTICE '定时任务已创建：daily-report-generator';
+  ELSE
+    RAISE NOTICE '跳过定时任务创建：pg_cron 扩展未启用';
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE NOTICE '定时任务创建失败：%', SQLERRM;
+END;
+$$;
 
 -- 创建任务状态查询函数
 CREATE OR REPLACE FUNCTION public.get_daily_report_job_status()
@@ -78,6 +93,19 @@ BEGIN
     RAISE EXCEPTION '权限不足：只有管理员可以查看定时任务状态';
   END IF;
   
+  -- 检查 pg_cron 扩展是否存在
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    -- 如果 pg_cron 未启用，返回提示信息
+    RETURN QUERY
+    SELECT 
+      'daily-report-generator'::TEXT,
+      'pg_cron 扩展未启用'::TEXT,
+      FALSE,
+      NULL::TIMESTAMP WITH TIME ZONE,
+      NULL::TIMESTAMP WITH TIME ZONE;
+    RETURN;
+  END IF;
+  
   -- 返回定时任务状态
   RETURN QUERY
   SELECT 
@@ -91,8 +119,14 @@ BEGIN
   
 EXCEPTION
   WHEN OTHERS THEN
-    -- 如果pg_cron未启用，返回空结果
-    RETURN;
+    -- 如果查询失败，返回错误信息
+    RETURN QUERY
+    SELECT 
+      'daily-report-generator'::TEXT,
+      ('错误: ' || SQLERRM)::TEXT,
+      FALSE,
+      NULL::TIMESTAMP WITH TIME ZONE,
+      NULL::TIMESTAMP WITH TIME ZONE;
 END;
 $$;
 
@@ -124,9 +158,15 @@ BEGIN
     RETURN;
   END IF;
   
+  -- 检查 pg_cron 扩展是否存在
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    RETURN QUERY SELECT FALSE, 'pg_cron 扩展未启用，无法管理定时任务'::TEXT, 'extension_not_available'::TEXT;
+    RETURN;
+  END IF;
+  
   IF enable_job THEN
     -- 启用定时任务
-    SELECT cron.schedule(
+    PERFORM cron.schedule(
       'daily-report-generator',
       '1 16 * * *',
       'SELECT public.scheduled_daily_report_job();'
@@ -134,7 +174,7 @@ BEGIN
     RETURN QUERY SELECT TRUE, '定时任务已启用'::TEXT, 'enabled'::TEXT;
   ELSE
     -- 禁用定时任务
-    SELECT cron.unschedule('daily-report-generator');
+    PERFORM cron.unschedule('daily-report-generator');
     RETURN QUERY SELECT TRUE, '定时任务已禁用'::TEXT, 'disabled'::TEXT;
   END IF;
   
@@ -160,14 +200,14 @@ RETURNS TABLE (
   总付费用户数 INTEGER,
   新增用户数 INTEGER,
   新增付费用户数 INTEGER,
-  新增付费用户兑换积分 INTEGER,
+  新增付费用户兑换积分 DECIMAL(10,2),
   新增兑换卡片数量 INTEGER,
-  新增兑换卡片积分 INTEGER,
+  新增兑换卡片积分 DECIMAL(10,2),
   总兑换卡片数量 INTEGER,
-  总兑换卡片积分 INTEGER,
-  新增积分消耗 INTEGER,
+  总兑换卡片积分 DECIMAL(10,2),
+  新增积分消耗 DECIMAL(10,2),
   新增扣分消耗次数 INTEGER,
-  总积分消耗 INTEGER,
+  总积分消耗 DECIMAL(10,2),
   总积分消耗次数 INTEGER,
   创建时间 TIMESTAMP WITH TIME ZONE
 )

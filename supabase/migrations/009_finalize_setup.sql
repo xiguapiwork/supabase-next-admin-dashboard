@@ -11,7 +11,7 @@ SET search_path = ''
 AS $$
 DECLARE
   user_name TEXT;
-  registration_points INTEGER;
+  registration_points DECIMAL(10,2);
 BEGIN
   -- 从raw_user_meta_data中获取用户名
   user_name := COALESCE(

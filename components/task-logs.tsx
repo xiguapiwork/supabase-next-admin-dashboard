@@ -29,8 +29,6 @@ import {
   Clock,
   RotateCcw,
   Trash2,
-  MoreHorizontal,
-  Edit,
   Copy
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -46,126 +44,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
-// 模拟任务日志数据
-const taskLogs = [
-  {
-    id: 1,
-    taskTime: '03-15 14:35:12',
-    taskId: 'PROC001Xy9Zw4Qn8Tp2',
-    operatorUser: '刘小明',
-    operatorEmail: 'liuxiaoming@example.com',
-    usedFunction: '使用功能',
-    status: '处理中',
-    usageDetails: '正在使用AI视频生成功能，预计消耗 120 积分',
-  },
-  {
-    id: 2,
-    taskTime: '03-15 14:32:45',
-    taskId: 'PROC002Mn8Xv1Pr7Uq4',
-    operatorUser: '王小红',
-    operatorEmail: 'wangxiaohong@example.com',
-    usedFunction: '兑换积分卡',
-    status: '处理中',
-    usageDetails: '正在验证兑换码 PREMIUM500，预计兑换 500 积分',
-  },
-  {
-    id: 3,
-    taskTime: '03-15 14:31:18',
-    taskId: 'PROC003No2Yw8Qs5Vr6',
-    operatorUser: '李小华',
-    operatorEmail: 'lixiaohua@example.com',
-    usedFunction: '使用功能',
-    status: '处理中',
-    usageDetails: '正在使用AI音乐生成功能，预计消耗 85 积分',
-  },
-  {
-    id: 4,
-    taskTime: '03-15 14:30:25',
-    taskId: 'E2x5Lm8Zw4Qn9Tp6',
-    operatorUser: '张三',
-    operatorEmail: 'zhangsan@example.com',
-    usedFunction: '兑换积分卡',
-    status: '成功',
-    usageDetails: '使用兑换码 NEWUSER100 兑换了 100 积分',
-  },
-  {
-    id: 5,
-    taskTime: '03-15 14:25:12',
-    taskId: 'F8y3Mn6Xv1Pr5Uq7',
-    operatorUser: '李四',
-    operatorEmail: 'lisi@example.com',
-    usedFunction: '使用功能',
-    status: '成功',
-    usageDetails: '使用AI文本生成功能，消耗 20 积分',
-  },
-  {
-    id: 6,
-    taskTime: '03-15 14:20:45',
-    taskId: 'G4z7No2Yw8Qs3Vr9',
-    operatorUser: '王五',
-    operatorEmail: 'wangwu@example.com',
-    usedFunction: '兑换积分卡',
-    status: '失败',
-    usageDetails: '尝试使用无效兑换码 INVALID123',
-  },
-  {
-    id: 7,
-    taskTime: '03-15 14:15:33',
-    taskId: 'H1a9Op5Zx4Rt6Ws2',
-    operatorUser: '赵六',
-    operatorEmail: 'zhaoliu@example.com',
-    usedFunction: '功能失败返回',
-    status: '成功',
-    usageDetails: 'AI图像生成失败，返还 50 积分',
-  },
-  {
-    id: 8,
-    taskTime: '03-15 14:10:18',
-    taskId: 'I5b3Pq8Zy7Su9Xt4',
-    operatorUser: '钱七',
-    operatorEmail: 'qianqi@example.com',
-    usedFunction: '注册',
-    status: '成功',
-    usageDetails: '新用户注册并获得新用户礼包 100 积分',
-  },
-  {
-    id: 9,
-    taskTime: '03-15 14:05:55',
-    taskId: 'J9c6Qr1Az3Tv8Yu5',
-    operatorUser: '孙八',
-    operatorEmail: 'sunba@example.com',
-    usedFunction: '使用功能',
-    status: '成功',
-    usageDetails: '使用AI代码生成功能，消耗 30 积分',
-  },
-  {
-    id: 10,
-    taskTime: '03-15 14:00:42',
-    taskId: 'K2d4Rs7By9Uw1Zv6',
-    operatorUser: '周九',
-    operatorEmail: 'zhoujiu@example.com',
-    usedFunction: '兑换积分卡',
-    status: '成功',
-    usageDetails: '使用兑换码 MONTHLY500 兑换了 500 积分',
-  },
-]
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { useTaskLogs, useTaskLogsCount } from '@/hooks/use-task-logs'
 
 type LogStatus = '成功' | '失败' | '处理中' | 'all'
-type SortField = 'timestamp' | 'user' | 'action' | 'status' | 'taskTime'
+type SortField = 'taskTime' | 'user' | 'function' | 'status'
 type SortOrder = 'asc' | 'desc'
 
 export function TaskLogs() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case '成功':
+      case '已完成':
         return <CheckCircle className="h-4 w-4 text-green-500" />
       case '失败':
         return <XCircle className="h-4 w-4 text-red-500" />
@@ -175,72 +66,36 @@ export function TaskLogs() {
         return <AlertCircle className="h-4 w-4 text-gray-500" />
     }
   }
-  const { tableBorder } = useAppSettings()
+
+  const { tableBorder, pageSize } = useAppSettings()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<LogStatus>('all')
   const [actionFilter, setActionFilter] = useState('all')
-  const [sortField, setSortField] = useState<SortField>('timestamp')
+  const [sortField, setSortField] = useState<SortField>('taskTime')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   
   // 批量选择状态
-  const [selectedLogs, setSelectedLogs] = useState<number[]>([])
+  const [selectedLogs, setSelectedLogs] = useState<string[]>([])
   const [isBatchDeleteDialogOpen, setIsBatchDeleteDialogOpen] = useState(false)
-  
-  // 单个记录操作状态
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
-  const { pageSize } = useAppSettings()
-  const itemsPerPage = pageSize
+  // 使用数据库查询
+  const { data: taskLogs = [], isLoading, error } = useTaskLogs({
+    searchTerm,
+    statusFilter: statusFilter === 'all' ? '' : statusFilter,
+    sortField,
+    sortOrder,
+    offset: (currentPage - 1) * pageSize,
+    limit: pageSize
+  })
 
-  // 筛选和排序逻辑
-  const filteredAndSortedLogs = taskLogs
-    .filter(log => {
-      const matchesSearch = log.operatorUser.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           log.operatorEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           log.taskId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           log.usageDetails.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesStatus = statusFilter === 'all' || log.status === statusFilter
-      const matchesAction = actionFilter === 'all' || log.usedFunction === actionFilter
-      return matchesSearch && matchesStatus && matchesAction
-    })
-    .sort((a, b) => {
-      let aValue: number | string, bValue: number | string
-      
-      switch (sortField) {
-        case 'timestamp':
-          aValue = new Date(a.taskTime).getTime()
-          bValue = new Date(b.taskTime).getTime()
-          break
-        case 'user':
-          aValue = a.operatorUser
-          bValue = b.operatorUser
-          break
-        case 'action':
-          aValue = a.usedFunction
-          bValue = b.usedFunction
-          break
-        case 'status':
-          aValue = a.status
-          bValue = b.status
-          break
-        default:
-          return 0
-      }
-      
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1
-      } else {
-        return aValue < bValue ? 1 : -1
-      }
-    })
+  const { data: totalCount = 0 } = useTaskLogsCount({
+    searchTerm,
+    statusFilter: statusFilter === 'all' ? '' : statusFilter
+  })
 
-  // 分页逻辑
-  const totalPages = Math.ceil(filteredAndSortedLogs.length / itemsPerPage)
-  const paginatedLogs = filteredAndSortedLogs.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+  // 计算总页数
+  const totalPages = Math.ceil(totalCount / pageSize)
 
   // 获取唯一的操作类型用于筛选
   const uniqueActions = Array.from(new Set(taskLogs.map(log => log.usedFunction)))
@@ -253,6 +108,7 @@ export function TaskLogs() {
       setSortField(field)
       setSortOrder('desc')
     }
+    setCurrentPage(1) // 重置到第一页
   }
 
   // 获取排序图标
@@ -268,7 +124,7 @@ export function TaskLogs() {
     setSearchTerm('')
     setStatusFilter('all')
     setActionFilter('all')
-    setSortField('timestamp')
+    setSortField('taskTime')
     setSortOrder('desc')
     setCurrentPage(1)
     setSelectedLogs([])
@@ -277,13 +133,13 @@ export function TaskLogs() {
   // 批量选择处理
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedLogs(paginatedLogs.map(log => log.id))
+      setSelectedLogs(taskLogs.map(log => log.taskId))
     } else {
       setSelectedLogs([])
     }
   }
 
-  const handleSelectLog = (logId: number, checked: boolean) => {
+  const handleSelectLog = (logId: string, checked: boolean) => {
     if (checked) {
       setSelectedLogs([...selectedLogs, logId])
     } else {
@@ -303,21 +159,25 @@ export function TaskLogs() {
     setIsBatchDeleteDialogOpen(false)
   }
 
-  // 单个记录操作
-  const handleEdit = () => {
-    // 编辑功能待实现
-    toast.info('编辑功能待实现')
+  // 处理搜索变化
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    setCurrentPage(1) // 重置到第一页
   }
 
-  const handleDelete = () => {
-    setIsDeleteDialogOpen(true)
+  // 处理状态筛选变化
+  const handleStatusFilterChange = (value: LogStatus) => {
+    setStatusFilter(value)
+    setCurrentPage(1) // 重置到第一页
   }
 
-  const confirmDelete = () => {
-    // 这里应该调用API删除记录
-    toast.success('记录已删除')
-    setIsDeleteDialogOpen(false)
+  // 处理操作筛选变化
+  const handleActionFilterChange = (value: string) => {
+    setActionFilter(value)
+    setCurrentPage(1) // 重置到第一页
   }
+
+
 
   return (
     <div className="px-6 pt-1 pb-4 flex flex-col h-full">
@@ -330,7 +190,7 @@ export function TaskLogs() {
               <Input
                 placeholder="搜索用户、任务ID、邮箱或详情..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -361,7 +221,7 @@ export function TaskLogs() {
           )}
           
           <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={(value: LogStatus) => setStatusFilter(value)}>
+            <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="状态筛选" />
               </SelectTrigger>
@@ -373,7 +233,7 @@ export function TaskLogs() {
               </SelectContent>
             </Select>
             
-            <Select value={actionFilter} onValueChange={setActionFilter}>
+            <Select value={actionFilter} onValueChange={handleActionFilterChange}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="操作筛选" />
               </SelectTrigger>
@@ -406,7 +266,7 @@ export function TaskLogs() {
                 <TableHead className={cn("w-[3%]", getTableBorderClasses(tableBorder).headerCell)}>
                   <div className="flex items-center justify-center">
                     <Checkbox
-                      checked={selectedLogs.length === paginatedLogs.length && paginatedLogs.length > 0}
+                      checked={selectedLogs.length === taskLogs.length && taskLogs.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
                   </div>
@@ -424,19 +284,43 @@ export function TaskLogs() {
                 <TableHead className={cn("w-[18%]", getTableBorderClasses(tableBorder).headerCell)}>操作用户</TableHead>
                 <TableHead className={cn("w-[10%]", getTableBorderClasses(tableBorder).headerCell)}>使用功能</TableHead>
                 <TableHead className={cn("w-[7%]", getTableBorderClasses(tableBorder).headerCell)}>状态</TableHead>
-                <TableHead className={cn("w-[32%]", getTableBorderClasses(tableBorder).headerCell)}>使用详情</TableHead>
-                <TableHead className="w-[4%] text-center">操作</TableHead>
+                <TableHead className={cn("w-[36%]", getTableBorderClasses(tableBorder).headerCell)}>使用详情</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-                {paginatedLogs.map((log) => (
-                  <TableRow key={log.id} className={cn("hover:bg-muted/30", getTableBorderClasses(tableBorder).row)}>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="flex items-center justify-center gap-2">
+                      <Clock className="h-4 w-4 animate-spin" />
+                      加载中...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="flex items-center justify-center gap-2 text-red-500">
+                      <AlertCircle className="h-4 w-4" />
+                      加载失败，请重试
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : taskLogs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    暂无数据
+                  </TableCell>
+                </TableRow>
+              ) : (
+                taskLogs.map((log) => (
+                  <TableRow key={log.taskId} className={cn("hover:bg-muted/30", getTableBorderClasses(tableBorder).row)}>
                     <TableCell className={cn("w-8 p-0", getTableBorderClasses(tableBorder).cell)}>
                       <div className="flex items-center justify-center h-full">
                         <Checkbox
-                          checked={selectedLogs.includes(log.id)}
-                          onCheckedChange={(checked) => handleSelectLog(log.id, checked as boolean)}
-                          aria-label={`选择日志 ${log.id}`}
+                          checked={selectedLogs.includes(log.taskId)}
+                          onCheckedChange={(checked) => handleSelectLog(log.taskId, checked as boolean)}
+                          aria-label={`选择日志 ${log.taskId}`}
                         />
                       </div>
                     </TableCell>
@@ -462,7 +346,7 @@ export function TaskLogs() {
                     <TableCell className={cn("", getTableBorderClasses(tableBorder).cell)}>
                       <div className="flex w-full items-center gap-3 rounded-md px-2 py-2">
                         <Avatar className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
-                          <AvatarImage src={undefined} alt={log.operatorUser} />
+                          <AvatarImage src={log.operatorAvatar} alt={log.operatorUser} />
                           <AvatarFallback className="text-base md:text-lg font-medium">{log.operatorUser[0]}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
@@ -479,7 +363,7 @@ export function TaskLogs() {
                         {getStatusIcon(log.status)}
                         <span className={cn(
                           "px-2 py-1 rounded-full text-xs font-medium w-16 text-center inline-block",
-                          log.status === '成功' && "bg-green-100 text-green-800",
+                          (log.status === '已完成' || log.status === '成功') && "bg-green-100 text-green-800",
                           log.status === '失败' && "bg-red-100 text-red-800",
                           log.status === '处理中' && "bg-yellow-100 text-yellow-800"
                         )}>
@@ -487,33 +371,12 @@ export function TaskLogs() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className={cn("text-sm text-gray-600 max-w-xs truncate", getTableBorderClasses(tableBorder).cell)}>
+                    <TableCell className={cn("text-sm text-gray-600", getTableBorderClasses(tableBorder).cell)}>
                       {log.usageDetails}
                     </TableCell>
-                    <TableCell className="text-center p-0">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit()}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            编辑记录
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-red-600"
-                            onClick={() => handleDelete()}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            删除记录
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
                   </TableRow>
-                ))}
+                ))
+              )}
               </TableBody>
             </Table>
           </div>
@@ -523,7 +386,7 @@ export function TaskLogs() {
       <div className="flex-shrink-0 pt-2 border-t">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-500">
-            显示 {(currentPage - 1) * itemsPerPage + 1} 到 {Math.min(currentPage * itemsPerPage, filteredAndSortedLogs.length)} 条，共 {filteredAndSortedLogs.length} 条记录
+            显示 {(currentPage - 1) * pageSize + 1} 到 {Math.min(currentPage * pageSize, totalCount)} 条，共 {totalCount} 条记录
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -569,25 +432,7 @@ export function TaskLogs() {
         </DialogContent>
       </Dialog>
 
-      {/* 单个删除确认对话框 */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>确认删除</DialogTitle>
-            <DialogDescription>
-              您确定要删除这条记录吗？此操作不可撤销。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              取消
-            </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              确认删除
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </div>
   )
 }

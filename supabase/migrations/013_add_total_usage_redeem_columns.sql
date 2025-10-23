@@ -3,11 +3,11 @@
 
 -- 添加 total_usage 列（总使用积分）
 ALTER TABLE public."user-management" 
-ADD COLUMN total_usage INTEGER NOT NULL DEFAULT 0 CHECK (total_usage >= 0);
+ADD COLUMN total_usage DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (total_usage >= 0);
 
 -- 添加 total_redeem 列（总兑换积分）
 ALTER TABLE public."user-management" 
-ADD COLUMN total_redeem INTEGER NOT NULL DEFAULT 0 CHECK (total_redeem >= 0);
+ADD COLUMN total_redeem DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (total_redeem >= 0);
 
 -- 添加 usage_count 列（总使用次数）
 ALTER TABLE public."user-management" 
@@ -79,9 +79,9 @@ WHERE total_redeem = 0 AND points > 0;
 -- 创建辅助函数：获取用户积分统计信息
 CREATE OR REPLACE FUNCTION public.get_user_points_stats(user_id UUID DEFAULT auth.uid())
 RETURNS TABLE (
-  current_points INTEGER,
-  total_usage INTEGER,
-  total_redeem INTEGER,
+  current_points DECIMAL(10,2),
+  total_usage DECIMAL(10,2),
+  total_redeem DECIMAL(10,2),
   redeem_count INTEGER,
   usage_count INTEGER,
   first_payment_time TIMESTAMP WITH TIME ZONE,
@@ -113,10 +113,10 @@ CREATE OR REPLACE FUNCTION public.fix_user_points_stats()
 RETURNS TABLE(
   user_id UUID,
   username TEXT,
-  old_total_usage INTEGER,
-  new_total_usage INTEGER,
-  old_total_redeem INTEGER,
-  new_total_redeem INTEGER
+  old_total_usage DECIMAL(10,2),
+  new_total_usage DECIMAL(10,2),
+  old_total_redeem DECIMAL(10,2),
+  new_total_redeem DECIMAL(10,2)
 )
 LANGUAGE plpgsql
 SET search_path = ''

@@ -1,6 +1,67 @@
+-- 创建自定义任务ID生成函数
+CREATE OR REPLACE FUNCTION public.generate_custom_task_id()
+RETURNS TEXT
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  chars TEXT := 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  result TEXT := '';
+  i INTEGER;
+BEGIN
+  -- 生成第一部分：4位字符
+  FOR i IN 1..4 LOOP
+    result := result || substr(chars, floor(random() * length(chars) + 1)::integer, 1);
+  END LOOP;
+  
+  -- 添加第一个连字符
+  result := result || '-';
+  
+  -- 生成第二部分：8位字符
+  FOR i IN 1..8 LOOP
+    result := result || substr(chars, floor(random() * length(chars) + 1)::integer, 1);
+  END LOOP;
+  
+  -- 添加第二个连字符
+  result := result || '-';
+  
+  -- 生成第三部分：4位字符
+  FOR i IN 1..4 LOOP
+    result := result || substr(chars, floor(random() * length(chars) + 1)::integer, 1);
+  END LOOP;
+  
+  RETURN result;
+END;
+$$;
+
+-- 创建确保唯一性的任务ID生成函数
+CREATE OR REPLACE FUNCTION public.generate_unique_task_id()
+RETURNS TEXT
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  new_id TEXT;
+  id_exists BOOLEAN;
+BEGIN
+  LOOP
+    -- 生成新的任务ID
+    new_id := public.generate_custom_task_id();
+    
+    -- 检查是否已存在
+    SELECT EXISTS(SELECT 1 FROM public."tasks" WHERE 任务ID = new_id) INTO id_exists;
+    
+    -- 如果不存在，则返回这个ID
+    IF NOT id_exists THEN
+      RETURN new_id;
+    END IF;
+  END LOOP;
+END;
+$$;
+
 -- 创建任务表
 CREATE TABLE public."tasks" (
-  任务ID UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  任务ID TEXT DEFAULT public.generate_unique_task_id() PRIMARY KEY,
   
   -- 用户信息
   用户ID UUID NOT NULL REFERENCES public."user-management"(id) ON DELETE CASCADE,
@@ -13,25 +74,18 @@ CREATE TABLE public."tasks" (
   状态 TEXT NOT NULL DEFAULT 'pending' CHECK (状态 IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
   
   -- 积分相关
-  积分消耗 INTEGER NOT NULL CHECK (积分消耗 > 0), -- 任务消耗的积分
+  积分消耗 DECIMAL(10,2) NOT NULL CHECK (积分消耗 > 0), -- 任务消耗的积分
   扣除记录ID UUID REFERENCES public."points_log"(积分记录ID) ON DELETE SET NULL, -- 关联的积分扣除记录
   退款记录ID UUID REFERENCES public."points_log"(积分记录ID) ON DELETE SET NULL, -- 如果失败，关联的退款记录
   
   -- 任务参数和结果
-  任务参数 JSONB, -- 任务参数（JSON格式存储）
-  任务结果 JSONB, -- 任务结果（JSON格式存储）
-  错误信息 TEXT, -- 错误信息
-  
-  -- 处理信息
-  开始时间 TIMESTAMP WITH TIME ZONE, -- 开始处理时间
-  完成时间 TIMESTAMP WITH TIME ZONE, -- 完成时间
-  
-  -- 元数据
-  元数据 JSONB, -- 额外的元数据
+  任务参数 JSONB, -- 任务输入参数，JSON格式存储
+  任务结果 JSONB, -- 任务输出结果，JSON格式存储
+  任务详情 TEXT, -- 任务详情信息：成功时存储任务描述和结果摘要，失败时存储错误信息
   
   -- 时间戳
-  创建时间 TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  更新时间 TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  创建时间 TIMESTAMP WITH TIME ZONE DEFAULT NOW(), -- 任务创建时间，也是任务开始时间
+  更新时间 TIMESTAMP WITH TIME ZONE DEFAULT NOW() -- 任务最后更新时间，完成时即为任务结束时间
 );
 
 -- 创建索引
@@ -80,18 +134,17 @@ CREATE OR REPLACE FUNCTION public.create_task(
   p_task_type TEXT,
   p_task_name TEXT,
   p_task_params JSONB DEFAULT NULL,
-  p_metadata JSONB DEFAULT NULL,
-  p_points_cost INTEGER DEFAULT NULL -- 设为可选参数
+  p_points_cost DECIMAL(10,2) DEFAULT NULL -- 设为可选参数
 )
-RETURNS UUID
+RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_task_id UUID;
+  v_task_id TEXT;
   v_points_log_id UUID;
-  v_final_points_cost INTEGER;
+  v_final_points_cost DECIMAL(10,2);
 BEGIN
   -- 1. 决定积分消耗
   IF p_points_cost IS NOT NULL THEN
@@ -105,9 +158,9 @@ BEGIN
 
   -- 2. 创建任务记录
   INSERT INTO public."tasks" (
-    用户ID, 任务类型, 任务名称, 积分消耗, 任务参数, 元数据
+    用户ID, 任务类型, 任务名称, 积分消耗, 任务参数
   ) VALUES (
-    p_user_id, p_task_type, p_task_name, v_final_points_cost, p_task_params, p_metadata
+    p_user_id, p_task_type, p_task_name, v_final_points_cost, p_task_params
   ) RETURNING 任务ID INTO v_task_id;
 
   -- 3. 如果需要变动积分
@@ -129,7 +182,7 @@ END;
 $$;
 
 -- 创建任务失败退款函数
-CREATE OR REPLACE FUNCTION public.refund_failed_task(p_task_id UUID)
+CREATE OR REPLACE FUNCTION public.refund_failed_task(p_task_id TEXT)
 RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -158,7 +211,7 @@ $$;
 
 -- 创建更新任务状态的函数
 CREATE OR REPLACE FUNCTION public.update_task_status(
-  p_task_id UUID,
+  p_task_id TEXT,
   p_status TEXT,
   p_task_result JSONB DEFAULT NULL,
   p_error_message TEXT DEFAULT NULL
@@ -185,15 +238,7 @@ BEGIN
   SET 
     状态 = p_status,
     任务结果 = COALESCE(p_task_result, 任务结果),
-    错误信息 = p_error_message,
-    开始时间 = CASE 
-      WHEN p_status = 'processing' AND 开始时间 IS NULL THEN NOW()
-      ELSE 开始时间 
-    END,
-    完成时间 = CASE 
-      WHEN p_status IN ('completed', 'failed', 'cancelled') THEN NOW()
-      ELSE 完成时间 
-    END,
+    任务详情 = p_error_message,
     更新时间 = NOW()
   WHERE 任务ID = p_task_id;
   
@@ -215,12 +260,12 @@ SET search_path = ''
 AS $$
 BEGIN
   -- 这里可以调用边缘函数或发送通知
-  -- 例如：PERFORM net.http_post('https://your-edge-function-url', NEW.id::text);
+  -- 例如：PERFORM net.http_post('https://your-edge-function-url', NEW.任务id::text);
   
   -- 暂时只更新状态为processing
   UPDATE public."tasks" 
-  SET 状态 = 'processing', 开始时间 = NOW(), 更新时间 = NOW()
-  WHERE 任务ID = NEW.任务ID;
+  SET 状态 = 'processing', 更新时间 = NOW()
+  WHERE 任务id = NEW.任务id;
   
   RETURN NEW;
 END;
@@ -231,3 +276,8 @@ CREATE TRIGGER trigger_new_task_processing
   AFTER INSERT ON public."tasks"
   FOR EACH ROW
   EXECUTE FUNCTION public.trigger_task_processing();
+
+-- 添加注释说明新的任务ID格式和字段用途
+COMMENT ON COLUMN public."tasks".任务ID IS '任务唯一标识符，格式为 XXXX-XXXXXXXX-XXXX，共16位大小写字母和数字的随机组合';
+COMMENT ON FUNCTION public.generate_custom_task_id() IS '生成自定义格式的任务ID：XXXX-XXXXXXXX-XXXX';
+COMMENT ON FUNCTION public.generate_unique_task_id() IS '生成唯一的任务ID，确保在tasks表中不重复';
