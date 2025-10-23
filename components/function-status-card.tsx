@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ToggleGroupCustom } from './ui/toggle-group-custom';
+import { useFunctionStatus } from '@/hooks/use-function-status';
 
 interface FunctionStatusCardProps {
   onClick?: () => void;
@@ -10,22 +11,55 @@ interface FunctionStatusCardProps {
 
 const FunctionStatusCard: React.FC<FunctionStatusCardProps> = ({ onClick, isSelected }) => {
   const [viewMode, setViewMode] = useState('次数'); // '次数' 或 '人数'
+  const { data: functionStatus, isLoading, error } = useFunctionStatus();
   
-  // 模拟功能状态数据 - 次数模式（功能一、功能二、功能三）
-  const functionsUsage = [
-    { name: '功能一', progress: 80 },
-    { name: '功能二', progress: 60 },
-    { name: '功能三', progress: 40 },
-  ];
+  // 根据视图模式获取数据
+  const getFunctions = () => {
+    // 如果正在加载，显示加载状态
+    if (isLoading) {
+      return [
+        { name: '加载中...', progress: 0 },
+        { name: '加载中...', progress: 0 },
+        { name: '加载中...', progress: 0 },
+      ];
+    }
+    
+    // 如果有错误，显示错误状态
+    if (error) {
+      return [
+        { name: '数据加载失败', progress: 0 },
+        { name: '请检查网络连接', progress: 0 },
+        { name: '稍后重试', progress: 0 },
+      ];
+    }
+    
+    if (!functionStatus || !functionStatus.functionStats || functionStatus.functionStats.length === 0) {
+      return [
+        { name: '暂无数据', progress: 0 },
+        { name: '暂无数据', progress: 0 },
+        { name: '暂无数据', progress: 0 },
+      ];
+    }
+    
+    if (viewMode === '次数') {
+      // 按使用次数排序，显示使用次数的百分比
+      const maxCount = Math.max(...functionStatus.functionStats.map(f => f.count), 1);
+      return functionStatus.functionStats.map(func => ({
+        name: func.name,
+        progress: Math.round((func.count / maxCount) * 100)
+      }));
+    } else {
+      // 按成功率排序，显示成功率
+      return [...functionStatus.functionStats]
+        .sort((a, b) => b.successRate - a.successRate)
+        .map(func => ({
+          name: func.name,
+          progress: func.successRate
+        }));
+    }
+  };
   
-  // 模拟功能状态数据 - 人数模式（功能三、功能二、功能一）
-  const functionsUsers = [
-    { name: '功能三', progress: 70 },
-    { name: '功能二', progress: 55 },
-    { name: '功能一', progress: 35 },
-  ];
-  
-  const functions = viewMode === '次数' ? functionsUsage : functionsUsers;
+  const functions = getFunctions();
 
   return (
     <Card

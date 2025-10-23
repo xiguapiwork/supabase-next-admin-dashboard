@@ -46,10 +46,10 @@ export function useUsageStats(
       // 获取任务日志数据
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
-        .select('创建时间, 状态')
-        .gte('创建时间', startDate.toISOString())
-        .lte('创建时间', endDate.toISOString())
-        .order('创建时间', { ascending: true });
+        .select('"创建时间", "状态"')
+        .gte('"创建时间"', startDate.toISOString())
+        .lte('"创建时间"', endDate.toISOString())
+        .order('"创建时间"', { ascending: true });
 
       if (tasksError) {
         throw new Error(`获取任务数据失败: ${tasksError.message}`);
@@ -74,14 +74,14 @@ export function useUsageStats(
           currentDate.setHours(23, 59, 59, 999);
           
           // 获取从开始日期到当前日期的所有任务
-          const tasksUpToDate = tasks.filter(task => {
-            const taskDate = new Date(task.创建时间);
+          const tasksUpToDate = tasks.filter((task: any) => {
+            const taskDate = new Date(task['创建时间']);
             return taskDate <= currentDate;
           });
           
           const totalUsage = tasksUpToDate.length;
-          const successUsage = tasksUpToDate.filter(task => 
-            task.状态 === 'completed' || task.状态 === '已完成'
+          const successUsage = tasksUpToDate.filter((task: any) => 
+            task['状态'] === 'completed' || task['状态'] === '已完成'
           ).length;
           const successRate = totalUsage > 0 ? (successUsage / totalUsage) * 100 : 0;
 
@@ -100,14 +100,14 @@ export function useUsageStats(
           nextDate.setDate(currentDate.getDate() + 1);
           
           // 获取当天的任务
-          const tasksOnDate = tasks.filter(task => {
-            const taskDate = new Date(task.创建时间);
+          const tasksOnDate = tasks.filter((task: any) => {
+            const taskDate = new Date(task['创建时间']);
             return taskDate >= currentDate && taskDate < nextDate;
           });
           
           const totalUsage = tasksOnDate.length;
-          const successUsage = tasksOnDate.filter(task => 
-            task.状态 === 'completed' || task.状态 === '已完成'
+          const successUsage = tasksOnDate.filter((task: any) => 
+            task['状态'] === 'completed' || task['状态'] === '已完成'
           ).length;
           const successRate = totalUsage > 0 ? (successUsage / totalUsage) * 100 : 0;
 

@@ -13,11 +13,11 @@ interface UsageCountSituationCardProps {
 const UsageCountSituationCard: React.FC<UsageCountSituationCardProps> = ({ onClick, isSelected }) => {
   const { data: usageData, loading } = useUsageStats('cumulative', 7);
   
-  // 使用真实数据或回退到模拟数据
+  // 使用真实数据，不回退到假数据
   const latestData = usageData && usageData.length > 0 ? usageData[usageData.length - 1] : null;
-  const totalUsageCount = latestData?.totalUsage || 8567;
-  const successCount = latestData?.successUsage || 7234;
-  const successRate = latestData?.successRate || 84;
+  const totalUsageCount = latestData?.totalUsage || 0;
+  const successCount = latestData?.successUsage || 0;
+  const successRate = latestData?.successRate || 0;
 
   return (
     <Card
@@ -42,6 +42,8 @@ const UsageCountSituationCard: React.FC<UsageCountSituationCardProps> = ({ onCli
           <div className="text-sm">
             {loading ? (
               <Skeleton className="h-4 w-20" />
+            ) : !latestData ? (
+              <span className="text-gray-400">暂无数据</span>
             ) : (
               <>
                 {successCount.toLocaleString()} / <span className="font-bold">{totalUsageCount.toLocaleString()}</span>
@@ -66,6 +68,8 @@ const UsageCountSituationCard: React.FC<UsageCountSituationCardProps> = ({ onCli
           <div className="text-xs font-bold">
             {loading ? (
               <Skeleton className="h-3 w-8" />
+            ) : !latestData ? (
+              <span className="text-gray-400">-</span>
             ) : (
               `${successRate}%`
             )}
