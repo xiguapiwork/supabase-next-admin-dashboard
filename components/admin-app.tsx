@@ -28,7 +28,7 @@ import { TaskLogs } from './task-logs'
 import { Setting } from './setting'
 import { AppSettingsProvider } from '@/contexts/AppSettingsContext'
 import { ExchangeCardsProvider, useExchangeCardsRefresh } from '@/contexts/ExchangeCardsContext'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
@@ -43,6 +43,7 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { triggerRefresh } = useExchangeCardsRefresh()
+  const queryClient = useQueryClient()
 
   // 处理页面切换，清除特定页面的URL参数
   const handlePageChange = (page: string) => {
@@ -86,15 +87,23 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
     email: true,
     roles: true,
     currentPoints: true,
-    totalConsumedPoints: false,
+    totalConsumedPoints: true,
     todayPoints: false,
     weekPoints: false,
     joinDate: true,
-    lastActiveTime: false,
-    notes: true
+    lastActiveTime: true,
+    notes: false,
   })
-
-  // 使用记录导出功能状态
+  
+  // 新建用户功能状态
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false)
+  const [createUserForm, setCreateUserForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    notes: '',
+    points: 0
+  })
   const [isLogsExportDialogOpen, setIsLogsExportDialogOpen] = useState(false)
   const [logsExportColumns, setLogsExportColumns] = useState({
     timestamp: true,
@@ -522,6 +531,67 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
     }
   }
 
+  // 处理新建用户
+  const handleCreateUser = async () => {
+    try {
+      // 验证表单数据
+      if (!createUserForm.username.trim()) {
+        toast.error('请输入用户名')
+        return
+      }
+      if (!createUserForm.email.trim()) {
+        toast.error('请输入邮箱')
+        return
+      }
+      if (!createUserForm.password.trim()) {
+        toast.error('请输入密码')
+        return
+      }
+  
+      // 使用API路由创建用户，避免在客户端使用service role key
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: createUserForm.email,
+          password: createUserForm.password,
+          username: createUserForm.username,
+          points: createUserForm.points,
+          notes: createUserForm.notes
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || '创建用户失败')
+      }
+  
+      // 用户创建成功
+      toast.success(`用户 ${createUserForm.username} 创建成功`)
+  
+      // 刷新用户管理数据
+      queryClient.invalidateQueries({ queryKey: ['users-management'] })
+  
+      // 重置表单并关闭对话框
+      setCreateUserForm({
+        username: '',
+        email: '',
+        password: '',
+        notes: '',
+        points: 0
+      })
+      setIsCreateUserDialogOpen(false)
+  
+    } catch (error) {
+      console.error('创建用户失败:', error)
+      const errorMessage = error instanceof Error ? error.message : '未知错误'
+      toast.error(`创建用户失败：${errorMessage}`)
+    }
+  }
+
   const renderCurrentPage = () => {
     switch (currentPage) {
       case '/dashboard':
@@ -545,147 +615,238 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
     switch (currentPage) {
       case '/users':
         return (
-          <Dialog open={isUserExportDialogOpen} onOpenChange={setIsUserExportDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 border-0 shadow-none">
-                <Download className="h-4 w-4 mr-2" />
-                导出
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>导出用户数据</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">角色筛选</Label>
-                  <Select value={exportRoleFilter} onValueChange={(value: '普通用户' | '付费用户' | '管理员' | 'all') => setExportRoleFilter(value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择要导出的角色" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">所有角色</SelectItem>
-                      <SelectItem value="普通用户">普通用户</SelectItem>
-                      <SelectItem value="付费用户">付费用户</SelectItem>
-                      <SelectItem value="管理员">管理员</SelectItem>
-                    </SelectContent>
-                  </Select>
+          <div className="flex gap-2">
+            <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 border-0 shadow-none">
+                  <Plus className="h-4 w-4 mr-2" />
+                  新建用户
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>新建用户</DialogTitle>
+                  <DialogDescription>
+                    创建新用户账户，设置基本信息和初始积分。
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="username" className="text-right">
+                      用户名
+                    </Label>
+                    <Input
+                      id="username"
+                      value={createUserForm.username}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, username: e.target.value }))}
+                      className="col-span-3"
+                      placeholder="请输入用户名"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="email" className="text-right">
+                      邮箱
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={createUserForm.email}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, email: e.target.value }))}
+                      className="col-span-3"
+                      placeholder="请输入邮箱地址"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="password" className="text-right">
+                      密码
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={createUserForm.password}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, password: e.target.value }))}
+                      className="col-span-3"
+                      placeholder="请输入密码"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="points" className="text-right">
+                      积分
+                    </Label>
+                    <Input
+                      id="points"
+                      type="number"
+                      value={createUserForm.points}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, points: Number(e.target.value) || 0 }))}
+                      className="col-span-3"
+                      placeholder="初始积分"
+                      min="0"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="notes" className="text-right">
+                      备注
+                    </Label>
+                    <Input
+                      id="notes"
+                      value={createUserForm.notes}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, notes: e.target.value }))}
+                      className="col-span-3"
+                      placeholder="用户备注（可选）"
+                    />
+                  </div>
                 </div>
-                
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">选择导出字段</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="username" 
-                        checked={userExportColumns.username}
-                        onCheckedChange={(checked) => 
-                          setUserExportColumns(prev => ({ ...prev, username: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="username" className="text-sm">用户名</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="email" 
-                        checked={userExportColumns.email}
-                        onCheckedChange={(checked) => 
-                          setUserExportColumns(prev => ({ ...prev, email: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="email" className="text-sm">邮箱</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="roles" 
-                        checked={userExportColumns.roles}
-                        onCheckedChange={(checked) => 
-                          setUserExportColumns(prev => ({ ...prev, roles: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="roles" className="text-sm">角色</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="currentPoints" 
-                        checked={userExportColumns.currentPoints}
-                        onCheckedChange={(checked) => 
-                          setUserExportColumns(prev => ({ ...prev, currentPoints: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="currentPoints" className="text-sm">当前积分</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="totalConsumedPoints" 
-                        checked={userExportColumns.totalConsumedPoints}
-                        onCheckedChange={(checked) => 
-                          setUserExportColumns(prev => ({ ...prev, totalConsumedPoints: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="totalConsumedPoints" className="text-sm">总消耗积分</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="todayPoints" 
-                        checked={userExportColumns.todayPoints}
-                        onCheckedChange={(checked) => 
-                          setUserExportColumns(prev => ({ ...prev, todayPoints: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="todayPoints" className="text-sm">今日积分</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="weekPoints" 
-                        checked={userExportColumns.weekPoints}
-                        onCheckedChange={(checked) => 
-                          setUserExportColumns(prev => ({ ...prev, weekPoints: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="weekPoints" className="text-sm">7日积分</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="joinDate" 
-                        checked={userExportColumns.joinDate}
-                        onCheckedChange={(checked) => 
-                          setUserExportColumns(prev => ({ ...prev, joinDate: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="joinDate" className="text-sm">注册时间</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="lastActiveTime" 
-                        checked={userExportColumns.lastActiveTime}
-                        onCheckedChange={(checked) => 
-                          setUserExportColumns(prev => ({ ...prev, lastActiveTime: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="lastActiveTime" className="text-sm">最后活跃</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="notes" 
-                        checked={userExportColumns.notes}
-                        onCheckedChange={(checked) => 
-                          setUserExportColumns(prev => ({ ...prev, notes: checked as boolean }))
-                        }
-                      />
-                      <Label htmlFor="notes" className="text-sm">备注</Label>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsCreateUserDialogOpen(false)}>
+                    取消
+                  </Button>
+                  <Button onClick={handleCreateUser}>创建用户</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <Dialog open={isUserExportDialogOpen} onOpenChange={setIsUserExportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 border-0 shadow-none">
+                  <Download className="h-4 w-4 mr-2" />
+                  导出
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>导出用户数据</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">角色筛选</Label>
+                    <Select value={exportRoleFilter} onValueChange={(value: '普通用户' | '付费用户' | '管理员' | 'all') => setExportRoleFilter(value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择要导出的角色" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">所有角色</SelectItem>
+                        <SelectItem value="普通用户">普通用户</SelectItem>
+                        <SelectItem value="付费用户">付费用户</SelectItem>
+                        <SelectItem value="管理员">管理员</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">选择导出字段</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="username" 
+                          checked={userExportColumns.username}
+                          onCheckedChange={(checked) => 
+                            setUserExportColumns(prev => ({ ...prev, username: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="username" className="text-sm">用户名</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="email" 
+                          checked={userExportColumns.email}
+                          onCheckedChange={(checked) => 
+                            setUserExportColumns(prev => ({ ...prev, email: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="email" className="text-sm">邮箱</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="roles" 
+                          checked={userExportColumns.roles}
+                          onCheckedChange={(checked) => 
+                            setUserExportColumns(prev => ({ ...prev, roles: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="roles" className="text-sm">角色</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="currentPoints" 
+                          checked={userExportColumns.currentPoints}
+                          onCheckedChange={(checked) => 
+                            setUserExportColumns(prev => ({ ...prev, currentPoints: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="currentPoints" className="text-sm">当前积分</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="totalConsumedPoints" 
+                          checked={userExportColumns.totalConsumedPoints}
+                          onCheckedChange={(checked) => 
+                            setUserExportColumns(prev => ({ ...prev, totalConsumedPoints: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="totalConsumedPoints" className="text-sm">总消耗积分</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="todayPoints" 
+                          checked={userExportColumns.todayPoints}
+                          onCheckedChange={(checked) => 
+                            setUserExportColumns(prev => ({ ...prev, todayPoints: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="todayPoints" className="text-sm">今日积分</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="weekPoints" 
+                          checked={userExportColumns.weekPoints}
+                          onCheckedChange={(checked) => 
+                            setUserExportColumns(prev => ({ ...prev, weekPoints: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="weekPoints" className="text-sm">7日积分</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="joinDate" 
+                          checked={userExportColumns.joinDate}
+                          onCheckedChange={(checked) => 
+                            setUserExportColumns(prev => ({ ...prev, joinDate: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="joinDate" className="text-sm">注册时间</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="lastActiveTime" 
+                          checked={userExportColumns.lastActiveTime}
+                          onCheckedChange={(checked) => 
+                            setUserExportColumns(prev => ({ ...prev, lastActiveTime: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="lastActiveTime" className="text-sm">最后活跃</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="notes" 
+                          checked={userExportColumns.notes}
+                          onCheckedChange={(checked) => 
+                            setUserExportColumns(prev => ({ ...prev, notes: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="notes" className="text-sm">备注</Label>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsUserExportDialogOpen(false)}>
-                  取消
-                </Button>
-                <Button onClick={handleExportPointsLogs}>导出</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsUserExportDialogOpen(false)}>
+                    取消
+                  </Button>
+                  <Button onClick={handleExportPointsLogs}>导出</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         )
       case '/points-logs':
         return (

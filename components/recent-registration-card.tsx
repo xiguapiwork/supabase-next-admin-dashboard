@@ -9,7 +9,7 @@ import { useRecentRegistrations } from '@/hooks/use-recent-registrations'
 import { useRecentPayments } from '@/hooks/use-recent-payments'
 
 // 空数据占位符
-const createEmptyRecord = (index: number) => ({
+const createEmptyRecord = (index: string | number) => ({
   id: `empty-${index}`,
   user: {
     name: '',
@@ -98,7 +98,8 @@ export function RecentRegistrationCard() {
     
     // 如果数据不足，用空记录填充
     while (records.length < cardCount) {
-      records.push(createEmptyRecord(records.length))
+      // 使用显示模式前缀确保唯一性，避免切换模式时的key冲突
+      records.push(createEmptyRecord(`${displayMode}-${records.length}`))
     }
     
     return records.slice(0, cardCount)
@@ -136,8 +137,8 @@ export function RecentRegistrationCard() {
               </div>
             ))
           ) : (
-            displayRecords.map((record) => (
-              <div key={record.id} className={`flex items-center justify-between px-[4%] py-[1%] border border-gray-200 dark:border-gray-700 rounded-lg aspect-[5/1] ${
+            displayRecords.map((record, index) => (
+              <div key={`${displayMode}-${record.id}-${index}`} className={`flex items-center justify-between px-[4%] py-[1%] border border-gray-200 dark:border-gray-700 rounded-lg aspect-[5/1] ${
                 record.isEmpty 
                   ? 'bg-gray-50 dark:bg-gray-800/50' 
                   : 'bg-muted/50 hover:bg-muted/70 transition-colors cursor-pointer'

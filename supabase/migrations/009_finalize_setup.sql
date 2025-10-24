@@ -1,7 +1,7 @@
 -- 文件: 009_finalize_setup.sql
 -- 最终设置：在所有其他表和函数都创建完毕后，安全地更新 handle_new_user 函数
 
--- 1. 更新用户注册处理函数，以支持动态积分配置
+-- 1. 更新用户注册处理函数，以支持动态积分配置和备注信息
 --    此时，add_points_log 和 get_function_points 函数均已存在
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
@@ -11,6 +11,8 @@ SET search_path = ''
 AS $$
 DECLARE
   user_name TEXT;
+  user_notes TEXT;
+  user_points DECIMAL(10,2);
   registration_points DECIMAL(10,2);
 BEGIN
   -- 从raw_user_meta_data中获取用户名
@@ -19,13 +21,20 @@ BEGIN
     split_part(NEW.email, '@', 1)
   );
 
-  -- 插入用户资料，初始积分为 0
-  INSERT INTO public."user-management" (id, username, avatar, points)
+  -- 从raw_user_meta_data中获取备注信息（如果有的话）
+  user_notes := NEW.raw_user_meta_data->>'notes';
+  
+  -- 从raw_user_meta_data中获取初始积分（如果有的话）
+  user_points := COALESCE((NEW.raw_user_meta_data->>'points')::DECIMAL(10,2), 0);
+
+  -- 插入用户资料，包含备注信息
+  INSERT INTO public."user-management" (id, username, avatar, points, 备注)
   VALUES (
     NEW.id,
     user_name,
     public.get_random_avatar(),
-    0
+    user_points,
+    user_notes
   );
 
   -- 从 app_config 动态获取"新用户注册"的积分配置

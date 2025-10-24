@@ -333,10 +333,24 @@ export function UsersManagement() {
     if (!editingNoteUserId) return
     
     try {
-      // 这里应该调用API保存备注
-      console.log('保存备注:', { userId: editingNoteUserId, notes: editingNoteValue })
+      // 调用API保存备注
+      const response = await fetch('/api/admin/update-user-notes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: editingNoteUserId,
+          notes: editingNoteValue
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || '保存备注失败')
+      }
       
-      // 模拟API调用成功
       toast.success("备注保存成功！")
       
       // 重置编辑状态
@@ -348,7 +362,8 @@ export function UsersManagement() {
       refetch()
     } catch (error) {
       console.error('保存备注失败:', error)
-      toast.error("保存备注失败，请重试")
+      const errorMessage = error instanceof Error ? error.message : '未知错误'
+      toast.error(`保存备注失败：${errorMessage}`)
     }
   }
 
@@ -417,6 +432,14 @@ export function UsersManagement() {
               <SelectItem value="管理员">管理员</SelectItem>
             </SelectContent>
           </Select>
+          <Button 
+            variant="outline" 
+            onClick={() => refetch()}
+            className="w-auto"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            刷新数据
+          </Button>
           <Button 
             variant="outline" 
             onClick={handleReset}

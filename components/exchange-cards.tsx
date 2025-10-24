@@ -69,7 +69,11 @@ interface ExchangeCard {
   兑换人: string | null;
   创建时间: string;
   兑换时间: string | null;
-  // 额外的用户信息字段
+  // 用户信息（从新的RPC函数直接获取）
+  兑换人用户名?: string;
+  兑换人邮箱?: string;
+  兑换人头像?: string;
+  // 保持向后兼容
   redeemerEmail?: string;
   redeemerAvatar?: string;
   redeemerUsername?: string;
@@ -78,7 +82,7 @@ interface ExchangeCard {
 // 获取真实兑换卡数据的函数
 const fetchExchangeCards = async (): Promise<ExchangeCard[]> => {
   try {
-    const { data, error } = await supabase.rpc('get_exchange_cards_list')
+    const { data, error } = await supabase.rpc('get_exchange_cards_with_emails')
     
     if (error) {
       console.error('获取兑换卡数据失败:', error)
@@ -86,7 +90,15 @@ const fetchExchangeCards = async (): Promise<ExchangeCard[]> => {
       return []
     }
     
-    return data || []
+    // 将新的RPC函数返回的数据映射到兼容格式
+    const mappedData = (data || []).map((card: ExchangeCard) => ({
+      ...card,
+      redeemerEmail: card.兑换人邮箱 || '',
+      redeemerAvatar: card.兑换人头像 || '',
+      redeemerUsername: card.兑换人用户名 || ''
+    }))
+    
+    return mappedData
   } catch (error) {
     console.error('获取兑换卡数据时发生错误:', error)
     toast.error('获取兑换卡数据时发生错误')
@@ -94,46 +106,6 @@ const fetchExchangeCards = async (): Promise<ExchangeCard[]> => {
   }
 }
 
-// 获取用户信息的函数（用于显示兑换人信息）
-const fetchUserInfo = async (userId: string | null) => {
-  if (!userId) return null
-  
-  try {
-    // 从 user-management 表获取用户信息
-    const { data: userInfo, error: userError } = await supabase
-      .from('user-management')
-      .select('username, avatar')
-      .eq('id', userId)
-      .single()
-    
-    if (userError) {
-      console.error('获取用户管理信息失败:', userError)
-      return null
-    }
-
-    // 获取当前登录用户信息来获取邮箱
-    let email = ''
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      // 如果查询的是当前登录用户，则可以获取邮箱
-      if (currentUser && currentUser.id === userId) {
-        email = currentUser.email || ''
-      }
-    } catch (authError) {
-      console.warn('无法获取当前用户邮箱信息:', authError)
-      // 邮箱获取失败不影响其他信息的返回
-    }
-    
-    return {
-      username: userInfo?.username || '',
-      avatar: userInfo?.avatar || '',
-      email: email
-    }
-  } catch (error) {
-    console.error('获取用户信息时发生错误:', error)
-    return null
-  }
-}
 const statusColors: Record<string, string> = {
   '已兑换': 'bg-gray-200 text-gray-600',
   '未兑换': 'bg-green-100 text-green-700',
@@ -177,29 +149,12 @@ export function ExchangeCards() {
   const { pageSize } = useAppSettings()
   const itemsPerPage = pageSize
 
-  // 获取兑换卡数据并处理用户信息
+  // 获取兑换卡数据（现在直接包含用户信息）
   const loadExchangeCards = async () => {
     setIsLoading(true)
     try {
       const cards = await fetchExchangeCards()
-      
-      // 为每个已兑换的卡片获取用户信息
-      const cardsWithUserInfo = await Promise.all(
-        cards.map(async (card) => {
-          if (card.兑换人) {
-            const userInfo = await fetchUserInfo(card.兑换人)
-            return {
-              ...card,
-              redeemerEmail: userInfo?.email || '',
-              redeemerAvatar: userInfo?.avatar || '',
-              redeemerUsername: userInfo?.username || ''
-            }
-          }
-          return card
-        })
-      )
-      
-      setExchangeCards(cardsWithUserInfo)
+      setExchangeCards(cards)
     } catch (error) {
       console.error('加载兑换卡数据失败:', error)
       toast.error('加载兑换卡数据失败')

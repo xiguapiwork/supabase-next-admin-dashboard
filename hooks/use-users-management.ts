@@ -24,11 +24,9 @@ const fetchUsersManagement = async (): Promise<UserManagementData[]> => {
   const supabase = createClient()
 
   try {
-    // 获取用户基础信息
+    // 使用新的RPC函数获取用户基础信息（包含完整邮箱）
     const { data: users, error: usersError } = await supabase
-      .from('user-management')
-      .select('*')
-      .order('created_at', { ascending: false })
+      .rpc('get_users_management_list')
 
     if (usersError) {
       throw new Error(`获取用户数据失败: ${usersError.message}`)
@@ -36,20 +34,6 @@ const fetchUsersManagement = async (): Promise<UserManagementData[]> => {
 
     if (!users || users.length === 0) {
       return []
-    }
-
-    // 获取当前登录用户信息（只能获取当前用户的邮箱）
-    let currentUserEmail = ''
-    let currentUserId = ''
-    
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (currentUser) {
-        currentUserEmail = currentUser.email || ''
-        currentUserId = currentUser.id
-      }
-    } catch (authError) {
-      console.warn('无法获取当前用户信息:', authError)
     }
 
     // 获取积分日志数据用于计算今日和7日消耗
@@ -74,7 +58,7 @@ const fetchUsersManagement = async (): Promise<UserManagementData[]> => {
     weekAgo.setDate(weekAgo.getDate() - 7)
 
     // 处理用户数据
-    const processedUsers: UserManagementData[] = users.map(user => {
+    const processedUsers: UserManagementData[] = users.map((user: any) => {
       // 计算今日消耗
       const todayConsumption = pointsLogs
         ?.filter((log: any) => 
@@ -106,8 +90,8 @@ const fetchUsersManagement = async (): Promise<UserManagementData[]> => {
          user.avatar.endsWith('.png') ? `/default-avatar/${user.avatar}` : `/default-avatar/${user.avatar}.png`) : 
         '/default-avatar/苹果.png'
 
-      // 获取用户邮箱（只有当前登录用户才显示真实邮箱）
-      const email = user.id === currentUserId ? currentUserEmail : '***@***.com'
+      // 获取用户邮箱（现在直接从RPC函数返回完整邮箱）
+      const email = user.email || '未知邮箱'
 
       return {
         id: user.id,

@@ -62,8 +62,8 @@ export function useRecentExchanges(limit: number = 10) {
       const supabase = createClient()
       
       try {
-        // 首先获取兑换卡数据
-        const { data: exchangeData, error } = await supabase.rpc('get_exchange_cards_list')
+        // 使用包含邮箱信息的RPC函数获取兑换卡数据
+        const { data: exchangeData, error } = await supabase.rpc('get_exchange_cards_with_emails')
 
         if (error) {
           console.error('获取兑换卡数据失败:', error)
@@ -80,56 +80,22 @@ export function useRecentExchanges(limit: number = 10) {
           .sort((a: any, b: any) => new Date(b.兑换时间).getTime() - new Date(a.兑换时间).getTime())
           .slice(0, limit)
 
-        // 获取当前用户信息以确定是否可以显示邮箱
-        const { data: { user: currentUser } } = await supabase.auth.getUser()
-
-        // 为每个兑换记录获取用户信息
-        const result = await Promise.all(
-          recentExchanges.map(async (record: any, index: number) => {
-            let userInfo = {
-              name: '未知用户',
-              email: '',
-              avatar: '/default-avatar/苹果.png'
-            }
-
-            if (record.兑换人) {
-              try {
-                // 从 user-management 表获取用户信息
-                const { data: userManagementData } = await supabase
-                  .from('user-management')
-                  .select('username, avatar')
-                  .eq('id', record.兑换人)
-                  .single()
-
-                if (userManagementData) {
-                  userInfo.name = userManagementData.username || '未知用户'
-                  userInfo.avatar = generateAvatarUrl({ avatar: userManagementData.avatar }) || '/default-avatar/苹果.png'
-                }
-
-                // 如果是当前登录用户，可以获取邮箱
-                if (currentUser && currentUser.id === record.兑换人) {
-                  userInfo.email = currentUser.email || ''
-                } else {
-                  // 对于其他用户，生成示例邮箱（基于用户名）
-                  userInfo.email = userInfo.name ? `${userInfo.name}@example.com` : ''
-                }
-              } catch (userError) {
-                console.warn('获取用户信息失败:', userError)
-                // 使用默认值
-              }
-            }
-
-            return {
-              id: `${record.卡号}-${index}`,
-              user: userInfo,
-              points: record.积分数量 || 0,
-              time: formatRelativeTime(record.兑换时间),
-              exchangeTime: record.兑换时间,
-              cardNumber: record.卡号,
-              cardName: record.卡片名称 || ''
-            }
-          })
-        )
+        // 直接使用RPC函数返回的完整用户信息
+        const result = recentExchanges.map((record: any, index: number) => {
+          return {
+            id: `${record.卡号}-${index}`,
+            user: {
+              name: record.兑换人用户名 || '未知用户',
+              email: record.兑换人邮箱 || '',
+              avatar: generateAvatarUrl({ avatar: record.兑换人头像 }) || '/default-avatar/苹果.png'
+            },
+            points: record.积分数量 || 0,
+            time: formatRelativeTime(record.兑换时间),
+            exchangeTime: record.兑换时间,
+            cardNumber: record.卡号,
+            cardName: record.卡片名称 || ''
+          }
+        })
 
         return result
       } catch (error) {
@@ -204,8 +170,8 @@ export function useMostExchanges(dateRange: string, limit: number = 10) {
       const supabase = createClient()
       
       try {
-        // 首先获取兑换卡数据
-        const { data: exchangeData, error } = await supabase.rpc('get_exchange_cards_list')
+        // 使用包含邮箱信息的RPC函数获取兑换卡数据
+        const { data: exchangeData, error } = await supabase.rpc('get_exchange_cards_with_emails')
 
         if (error) {
           console.error('获取兑换卡数据失败:', error)
@@ -255,6 +221,11 @@ export function useMostExchanges(dateRange: string, limit: number = 10) {
           count: number
           totalPoints: number
           latestExchange: string
+          userInfo: {
+            name: string
+            email: string
+            avatar: string
+          }
         }>()
 
         exchangesInRange.forEach((card: any) => {
@@ -273,7 +244,12 @@ export function useMostExchanges(dateRange: string, limit: number = 10) {
               userId,
               count: 1,
               totalPoints: card.积分数量 || 0,
-              latestExchange: card.兑换时间
+              latestExchange: card.兑换时间,
+              userInfo: {
+                name: card.兑换人用户名 || '未知用户',
+                email: card.兑换人邮箱 || '',
+                avatar: generateAvatarUrl({ avatar: card.兑换人头像 }) || '/default-avatar/苹果.png'
+              }
             })
           }
         })
@@ -286,51 +262,17 @@ export function useMostExchanges(dateRange: string, limit: number = 10) {
           })
           .slice(0, limit)
 
-        // 获取当前用户信息以确定是否可以显示邮箱
-        const { data: { user: currentUser } } = await supabase.auth.getUser()
-
-        // 获取用户信息
-        const result = await Promise.all(
-          sortedStats.map(async (stat, index) => {
-            let userInfo = {
-              name: '未知用户',
-              email: '',
-              avatar: '/default-avatar/苹果.png'
-            }
-
-            try {
-              const { data: userManagementData } = await supabase
-                .from('user-management')
-                .select('username, avatar')
-                .eq('id', stat.userId)
-                .single()
-
-              if (userManagementData) {
-                userInfo.name = userManagementData.username || '未知用户'
-                userInfo.avatar = generateAvatarUrl({ avatar: userManagementData.avatar }) || '/default-avatar/苹果.png'
-                
-                // 如果是当前登录用户，可以获取邮箱
-                if (currentUser && currentUser.id === stat.userId) {
-                  userInfo.email = currentUser.email || ''
-                } else {
-                  // 对于其他用户，生成示例邮箱（基于用户名）
-                  userInfo.email = userInfo.name ? `${userInfo.name}@example.com` : ''
-                }
-              }
-            } catch (userError) {
-              console.warn('获取用户信息失败:', userError)
-            }
-
-            return {
-              id: `most-${stat.userId}-${index}`,
-              user: userInfo,
-              points: stat.totalPoints,
-              time: formatRelativeTime(stat.latestExchange),
-              exchangeCount: stat.count,
-              totalPoints: stat.totalPoints
-            }
-          })
-        )
+        // 直接使用已收集的用户信息
+        const result = sortedStats.map((stat, index) => {
+          return {
+            id: `most-${stat.userId}-${index}`,
+            user: stat.userInfo,
+            points: stat.totalPoints,
+            time: formatRelativeTime(stat.latestExchange),
+            exchangeCount: stat.count,
+            totalPoints: stat.totalPoints
+          }
+        })
 
         return result
       } catch (error) {
