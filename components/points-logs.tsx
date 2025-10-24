@@ -97,15 +97,6 @@ const fetchPointsLogs = async (params: {
   sortOrder: string
 }): Promise<PointsLogData[]> => {
   try {
-    console.log('调用 get_points_logs_list，参数:', {
-      p_limit: params.limit,
-      p_offset: params.offset,
-      p_search_term: params.searchTerm || null,
-      p_action_filter: params.actionFilter === 'all' ? null : params.actionFilter,
-      p_sort_field: params.sortField,
-      p_sort_order: params.sortOrder
-    })
-    
     const { data, error } = await supabase.rpc('get_points_logs_list', {
       p_limit: params.limit,
       p_offset: params.offset,
@@ -114,8 +105,6 @@ const fetchPointsLogs = async (params: {
       p_sort_field: params.sortField,
       p_sort_order: params.sortOrder
     })
-    
-    console.log('get_points_logs_list 返回结果:', { data, error })
     
     if (error) {
       console.error('获取积分日志数据失败:', error)
@@ -138,17 +127,10 @@ const fetchPointsLogsCount = async (params: {
   actionFilter: string
 }): Promise<number> => {
   try {
-    console.log('调用 get_points_logs_count，参数:', {
-      p_search_term: params.searchTerm || null,
-      p_action_filter: params.actionFilter === 'all' ? null : params.actionFilter
-    })
-    
     const { data, error } = await supabase.rpc('get_points_logs_count', {
       p_search_term: params.searchTerm || null,
       p_action_filter: params.actionFilter === 'all' ? null : params.actionFilter
     })
-    
-    console.log('get_points_logs_count 返回结果:', { data, error })
     
     if (error) {
       console.error('获取积分日志总数失败:', error)

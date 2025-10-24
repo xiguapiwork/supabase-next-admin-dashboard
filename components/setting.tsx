@@ -117,10 +117,7 @@ export function Setting() {
   const loadAppConfig = useCallback(async () => {
     try {
       setIsLoadingTemplates(true)
-      console.log('开始调用 get_app_config_list RPC...')
       const { data, error } = await supabase.rpc('get_app_config_list')
-      
-      console.log('RPC 调用结果:', { data, error })
       
       if (error) {
         console.error('加载功能设置失败:', error)
@@ -441,14 +438,6 @@ export function Setting() {
 
         if (isNewTemplate) {
           // 新模板：先创建分类
-          console.log('准备创建新分类，参数:', {
-            p_配置名称: template.title,
-            p_配置类型: 'category',
-            p_积分消耗: 0,
-            p_parent_id: null,
-            p_备注: template.description || ''
-          })
-          
           const { data: categoryData, error: categoryError } = await supabase.rpc('upsert_app_config', {
             p_配置名称: template.title.trim(),
             p_配置类型: 'category',
@@ -477,19 +466,9 @@ export function Setting() {
           }
           
           categoryId = categoryData
-          console.log('分类创建成功，返回ID:', categoryId)
         } else {
           // 现有模板：更新分类
-          console.log('准备更新分类，参数:', {
-            config_id: template.id,
-            p_配置名称: template.title,
-            p_配置类型: 'category',
-            p_积分消耗: 0,
-            p_parent_id: null,
-            p_备注: template.description || ''
-          })
-          
-          const { error: categoryError } = await supabase.rpc('upsert_app_config', {
+          const { error: updateCategoryError } = await supabase.rpc('upsert_app_config', {
             config_id: template.id,
             p_配置名称: template.title.trim(),
             p_配置类型: 'category',
@@ -498,19 +477,19 @@ export function Setting() {
             p_备注: (template.description || '').trim()
           })
 
-          if (categoryError) {
-            console.error('更新分类失败:', categoryError)
-            console.error('错误类型:', typeof categoryError)
-            console.error('错误字符串化:', JSON.stringify(categoryError, null, 2))
+          if (updateCategoryError) {
+            console.error('更新分类失败:', updateCategoryError)
+            console.error('错误类型:', typeof updateCategoryError)
+            console.error('错误字符串化:', JSON.stringify(updateCategoryError, null, 2))
             
             let errorMessage = '未知错误'
-            if (typeof categoryError === 'string') {
-              errorMessage = categoryError
-            } else if (categoryError && typeof categoryError === 'object') {
-              errorMessage = categoryError.message || 
-                            categoryError.details || 
-                            categoryError.hint || 
-                            JSON.stringify(categoryError)
+            if (typeof updateCategoryError === 'string') {
+              errorMessage = updateCategoryError
+            } else if (updateCategoryError && typeof updateCategoryError === 'object') {
+              errorMessage = updateCategoryError.message || 
+                            updateCategoryError.details || 
+                            updateCategoryError.hint || 
+                            JSON.stringify(updateCategoryError)
             }
             
             toast.error('更新分类失败: ' + errorMessage)
@@ -518,7 +497,6 @@ export function Setting() {
           }
           
           categoryId = template.id // 对于现有模板，使用原有的 ID
-          console.log('分类更新成功，使用ID:', categoryId)
         }
 
         // 获取现有的功能项
@@ -543,8 +521,6 @@ export function Setting() {
               p_备注: ''
             }
             
-            console.log(`准备${isNewFeature ? '创建' : '更新'}功能项，参数:`, featureParams)
-            
             const { data: featureData, error: featureError } = await supabase.rpc('upsert_app_config', featureParams)
 
             if (featureError) {
@@ -567,7 +543,6 @@ export function Setting() {
               return
             }
             
-            console.log(`功能项${isNewFeature ? '创建' : '更新'}成功，返回数据:`, featureData)
           }
         }
 
@@ -939,7 +914,6 @@ export function Setting() {
       }
       
       // 这里应该调用实际的API
-      console.log(`执行清除操作: ${cleanupType}`, cleanupSettings)
       
       toast.success(message)
       setIsCleanupDialogOpen(false)

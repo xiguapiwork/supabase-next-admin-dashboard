@@ -616,95 +616,6 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
       case '/users':
         return (
           <div className="flex gap-2">
-            <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 border-0 shadow-none">
-                  <Plus className="h-4 w-4 mr-2" />
-                  新建用户
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>新建用户</DialogTitle>
-                  <DialogDescription>
-                    创建新用户账户，设置基本信息和初始积分。
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="username" className="text-right">
-                      用户名
-                    </Label>
-                    <Input
-                      id="username"
-                      value={createUserForm.username}
-                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, username: e.target.value }))}
-                      className="col-span-3"
-                      placeholder="请输入用户名"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="email" className="text-right">
-                      邮箱
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={createUserForm.email}
-                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, email: e.target.value }))}
-                      className="col-span-3"
-                      placeholder="请输入邮箱地址"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="password" className="text-right">
-                      密码
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={createUserForm.password}
-                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, password: e.target.value }))}
-                      className="col-span-3"
-                      placeholder="请输入密码"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="points" className="text-right">
-                      积分
-                    </Label>
-                    <Input
-                      id="points"
-                      type="number"
-                      value={createUserForm.points}
-                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, points: Number(e.target.value) || 0 }))}
-                      className="col-span-3"
-                      placeholder="初始积分"
-                      min="0"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="notes" className="text-right">
-                      备注
-                    </Label>
-                    <Input
-                      id="notes"
-                      value={createUserForm.notes}
-                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, notes: e.target.value }))}
-                      className="col-span-3"
-                      placeholder="用户备注（可选）"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsCreateUserDialogOpen(false)}>
-                    取消
-                  </Button>
-                  <Button onClick={handleCreateUser}>创建用户</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            
             <Dialog open={isUserExportDialogOpen} onOpenChange={setIsUserExportDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 border-0 shadow-none">
@@ -843,6 +754,95 @@ function AdminAppInner({ initialPage = '/dashboard' }: AdminAppProps) {
                     取消
                   </Button>
                   <Button onClick={handleExportPointsLogs}>导出</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="h-8 shadow-none">
+                  <Plus className="h-4 w-4 mr-2" />
+                  新建用户
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>新建用户</DialogTitle>
+                  <DialogDescription>
+                    创建新用户账户，设置基本信息和初始积分。
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="username" className="text-right">
+                      用户名
+                    </Label>
+                    <Input
+                      id="username"
+                      value={createUserForm.username}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, username: e.target.value }))}
+                      className="col-span-3"
+                      placeholder="请输入用户名"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="email" className="text-right">
+                      邮箱
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={createUserForm.email}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, email: e.target.value }))}
+                      className="col-span-3"
+                      placeholder="请输入邮箱地址"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="password" className="text-right">
+                      密码
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={createUserForm.password}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, password: e.target.value }))}
+                      className="col-span-3"
+                      placeholder="请输入密码"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="points" className="text-right">
+                      积分
+                    </Label>
+                    <Input
+                      id="points"
+                      type="number"
+                      value={createUserForm.points}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, points: Number(e.target.value) || 0 }))}
+                      className="col-span-3"
+                      placeholder="初始积分"
+                      min="0"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="notes" className="text-right">
+                      备注
+                    </Label>
+                    <Input
+                      id="notes"
+                      value={createUserForm.notes}
+                      onChange={(e) => setCreateUserForm(prev => ({ ...prev, notes: e.target.value }))}
+                      className="col-span-3"
+                      placeholder="用户备注（可选）"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsCreateUserDialogOpen(false)}>
+                    取消
+                  </Button>
+                  <Button onClick={handleCreateUser}>创建用户</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
